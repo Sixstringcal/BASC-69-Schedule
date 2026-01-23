@@ -23,23 +23,23 @@ const EVENT_NAMES = {
 };
 
 const EVENT_ICONS = {
-    '222': '🔲',
-    '333': '🎲',
-    '444': '🧊',
-    '555': '⬜',
-    '666': '🔷',
-    '777': '🔶',
-    '333bf': '🙈',
-    '333fm': '🧠',
-    '333oh': '✋',
-    'clock': '⏰',
-    'minx': '⬡',
-    'pyram': '🔺',
-    'skewb': '🔶',
-    'sq1': '◻️',
-    '444bf': '🙈',
-    '555bf': '🙈',
-    '333mbf': '🙈'
+    '222': '',
+    '333': '',
+    '444': '',
+    '555': '',
+    '666': '',
+    '777': '',
+    '333bf': '',
+    '333fm': '',
+    '333oh': '',
+    'clock': '',
+    'minx': '',
+    'pyram': '',
+    'skewb': '',
+    'sq1': '',
+    '444bf': '',
+    '555bf': '',
+    '333mbf': ''
 };
 
 // Global data storage
@@ -413,9 +413,9 @@ function showActivityInfo(activityName, activityCode) {
     let subtitle = '';
     
     if (roundInfo && !icon) {
-        icon = EVENT_ICONS[roundInfo.eventId] || '🎯';
+        icon = EVENT_ICONS[roundInfo.eventId] || '';
     } else if (!icon) {
-        icon = '📋';
+        icon = '';
     }
     
     let infoHTML = `
