@@ -46,6 +46,7 @@ const EVENT_ICONS = {
 let wcifData = null;
 let customInfo = null;
 let selectedDay = 0;
+let visibleRooms = new Set();
 
 // Initialize the application
 async function init() {
@@ -169,13 +170,28 @@ function renderRoomLegend() {
     const roomLegend = document.getElementById('roomLegend');
     const venue = wcifData.schedule.venues[0];
     
+    venue.rooms.forEach(room => visibleRooms.add(room.id));
+    
     venue.rooms.forEach(room => {
         const badge = document.createElement('div');
-        badge.className = 'room-badge';
+        badge.className = 'room-badge active';
+        badge.dataset.roomId = room.id;
         badge.innerHTML = `
             <div class="room-color" style="background-color: ${room.color};"></div>
             <span>${room.name}</span>
         `;
+        
+        badge.addEventListener('click', () => {
+            if (visibleRooms.has(room.id)) {
+                visibleRooms.delete(room.id);
+                badge.classList.remove('active');
+            } else {
+                visibleRooms.add(room.id);
+                badge.classList.add('active');
+            }
+            renderSchedule(selectedDay);
+        });
+        
         roomLegend.appendChild(badge);
     });
 }
@@ -194,12 +210,13 @@ function renderSchedule(dayIndex) {
     targetDate.setDate(targetDate.getDate() + dayIndex);
     const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     
-    // Collect all activities for this day, grouped by room
+    // Collect all activities for this day, grouped by room (only visible rooms)
     const roomActivities = {};
     let earliestTime = null;
     let latestTime = null;
     
     venue.rooms.forEach(room => {
+        if (!visibleRooms.has(room.id)) return;
         const dayActivities = room.activities.filter(activity => {
             const activityStart = new Date(activity.startTime);
             

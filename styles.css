@@ -206,12 +206,31 @@ section h2 {
     border-radius: 20px;
     font-size: 0.9rem;
     box-shadow: var(--shadow);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    border: 2px solid transparent;
+    opacity: 0.5;
+}
+
+.room-badge.active {
+    opacity: 1;
+    border-color: var(--primary-color);
+}
+
+.room-badge:hover {
+    transform: translateY(-2px);
+    box-shadow: var(--shadow-hover);
 }
 
 .room-color {
     width: 20px;
     height: 20px;
     border-radius: 50%;
+    transition: all 0.2s ease;
+}
+
+.room-badge:not(.active) .room-color {
+    opacity: 0.4;
 }
 
 /* Schedule Grid - TV Guide Style */
