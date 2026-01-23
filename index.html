@@ -1,0 +1,68 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Bay Area Speedcubin' 69 2026 - Schedule</title>
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="loading" id="loading">
+        <div class="spinner"></div>
+        <p>Loading competition data...</p>
+    </div>
+
+    <header class="header">
+        <div class="container">
+            <h1 class="comp-title" id="compTitle">Loading...</h1>
+            <p class="comp-dates" id="compDates"></p>
+            <p class="comp-venue" id="compVenue"></p>
+        </div>
+    </header>
+
+    <main class="main">
+        <section class="info-section">
+            <div class="container">
+                <div class="info-cards">
+                    <div class="info-card">
+                        <h3>📅 Competition Dates</h3>
+                        <p id="dateInfo"></p>
+                    </div>
+                    <div class="info-card">
+                        <h3>📍 Venue</h3>
+                        <p id="venueInfo"></p>
+                    </div>
+                </div>
+            </div>
+        </section>
+
+        <section class="schedule-section">
+            <div class="container">
+                <h2>📆 Competition Schedule</h2>
+                <div class="day-tabs" id="dayTabs"></div>
+                <div class="room-legend" id="roomLegend"></div>
+                <div class="schedule-grid" id="scheduleGrid"></div>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Info Modal -->
+    <div class="modal" id="infoModal">
+        <div class="modal-overlay" id="modalOverlay"></div>
+        <div class="modal-content">
+            <button class="modal-close" id="modalClose">&times;</button>
+            <div id="modalBody"></div>
+        </div>
+    </div>
+
+    <footer class="footer">
+        <div class="container">
+            <p>© 2026 Bay Area Speedcubin' 69 | Powered by WCA WCIF</p>
+            <p>Data from <a href="https://www.worldcubeassociation.org/" target="_blank">World Cube Association</a></p>
+        </div>
+    </footer>
+
+    <script src="script.js"></script>
+</body>
+</html>

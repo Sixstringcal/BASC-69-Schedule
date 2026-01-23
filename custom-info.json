@@ -1,0 +1,42 @@
+{
+  "activityInfo": {
+    "9x9x9 Cube": {
+      "customTimeLimit": "1:00:00.00",
+      "customFormat": "Best of 1 solve"
+    }
+  },
+  "globalSettings": {
+    "showInfoForAllActivities": false,
+    "defaultDescription": "",
+    "hideInfoForActivityNames": [
+      "Check-in"
+    ]
+  },
+  "fieldDefinitions": {
+    "description": "Main description text shown in the modal",
+    "notes": "Additional notes or important information",
+    "icon": "Emoji icon to display in modal header (overrides default event icon)",
+    "customTimeLimit": "Override WCIF time limit (e.g., '10:00', '2:30', '45s')",
+    "customCutoff": "Override WCIF cutoff (e.g., '2:00 (2 attempts)')",
+    "customFormat": "Override WCIF format (e.g., 'Average of 5', 'Best of 3')",
+    "advancement": "Custom advancement condition (overrides WCIF)",
+    "extraInfo": "Any additional custom fields as key-value pairs"
+  },
+  "examples": {
+    "comment": "Below are more examples you can use as templates. Use the exact activity name as shown in the schedule.",
+    "3x3x3 Blindfolded, Round 1": {
+      "description": "Memorize, then solve while blindfolded!",
+      "notes": "Remember to bring your own blindfold. Inspection time is 60 seconds max."
+    },
+    "Competitor Meeting": {
+      "description": "Mandatory meeting for all competitors. Important announcements will be made.",
+      "icon": "👥",
+      "notes": "Attendance is required!"
+    },
+    "5x5x5 Cube, Round 1": {
+      "customTimeLimit": "5:00",
+      "description": "Solve the Professor's Cube!",
+      "advancement": "Top 50% advance to finals"
+    }
+  }
+}
