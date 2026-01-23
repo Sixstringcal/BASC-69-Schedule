@@ -118,7 +118,7 @@ function renderCompetitionInfo() {
     document.getElementById('compDates').textContent = dates;
     
     const venue = wcifData.schedule.venues[0];
-    document.getElementById('compVenue').textContent = `${venue.name}, ${venue.timezone}`;
+    document.getElementById('compVenue').textContent = `${venue.name}`;
 }
 
 // Render info cards
