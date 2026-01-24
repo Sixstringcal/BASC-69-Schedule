@@ -33,6 +33,9 @@ async function checkAuthStatus() {
             if (isDelegate) {
                 document.getElementById('adminTab').style.display = 'block';
             }
+            
+            // Update UI after auth check completes
+            setupUserSection();
         }
     } catch (error) {
         console.error('Auth check error:', error);
