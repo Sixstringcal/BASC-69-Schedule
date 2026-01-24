@@ -7,6 +7,13 @@ let isDelegate = false;
 
 // Initialize group selection functionality
 async function initGroupSelection() {
+    // Check if returning from OAuth login
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('login') === 'success') {
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+    
     await checkAuthStatus();
     setupTabNavigation();
     setupUserSection();
