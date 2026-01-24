@@ -1,0 +1,22 @@
+node_modules/
+.env
+*.log
+.DS_Store
+.vscode/
+.idea/
+
+# Backend
+backend/node_modules/
+backend/.env
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+
+# Database
+*.sql~
+mysql-data/
+
+# Temporary files
+*.tmp
+*.temp
+.cache/

@@ -1,0 +1,29 @@
+{
+  "groupSettings": {
+    "3x3x3 Cube, Round 1": {
+      "numGroups": 4,
+      "maxPerGroup": 24
+    },
+    "2x2x2 Cube, Round 1": {
+      "numGroups": 3,
+      "maxPerGroup": 24
+    },
+    "4x4x4 Cube, Round 1": {
+      "numGroups": 2,
+      "maxPerGroup": 24
+    },
+    "3x3x3 One-Handed, Round 1": {
+      "numGroups": 2,
+      "maxPerGroup": 24
+    },
+    "9x9x9 Cube": {
+      "numGroups": 1,
+      "maxPerGroup": 24
+    }
+  },
+  "fieldDefinitions": {
+    "numGroups": "Number of groups for this event/round",
+    "maxPerGroup": "Maximum number of competitors per group (default: 24)"
+  },
+  "instructions": "Add entries for any event/round that should have group selection. Use the exact activity name as it appears in the WCIF schedule."
+}

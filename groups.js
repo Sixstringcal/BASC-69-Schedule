@@ -1,0 +1,414 @@
+// API Configuration
+const API_BASE_URL = 'http://localhost:3000';
+
+// Global state
+let currentUser = null;
+let isDelegate = false;
+
+// Initialize group selection functionality
+async function initGroupSelection() {
+    await checkAuthStatus();
+    setupTabNavigation();
+    setupUserSection();
+}
+
+// Check authentication status
+async function checkAuthStatus() {
+    try {
+        const response = await fetch(`${API_BASE_URL}/auth/me`, {
+            credentials: 'include'
+        });
+        const data = await response.json();
+        
+        if (data.authenticated) {
+            currentUser = data.user;
+            
+            // Check if user is a delegate
+            const delegateResponse = await fetch(`${API_BASE_URL}/api/admin/check`, {
+                credentials: 'include'
+            });
+            const delegateData = await delegateResponse.json();
+            isDelegate = delegateData.isDelegate || false;
+            
+            if (isDelegate) {
+                document.getElementById('adminTab').style.display = 'block';
+            }
+        }
+    } catch (error) {
+        console.error('Auth check error:', error);
+    }
+}
+
+// Setup tab navigation
+function setupTabNavigation() {
+    const tabs = document.querySelectorAll('.nav-tab');
+    const tabContents = document.querySelectorAll('.tab-content');
+    
+    tabs.forEach(tab => {
+        tab.addEventListener('click', () => {
+            const tabName = tab.dataset.tab;
+            
+            // Update active tab
+            tabs.forEach(t => t.classList.remove('active'));
+            tab.classList.add('active');
+            
+            // Update active content
+            tabContents.forEach(content => {
+                content.classList.remove('active');
+            });
+            document.getElementById(`${tabName}Tab`).classList.add('active');
+            
+            // Load tab content
+            if (tabName === 'groups') {
+                loadGroupSelection();
+            } else if (tabName === 'admin') {
+                loadAdminPanel();
+            }
+        });
+    });
+}
+
+// Setup user section in header
+function setupUserSection() {
+    const userSection = document.getElementById('userSection');
+    
+    if (currentUser) {
+        userSection.innerHTML = `
+            <div class="user-info">
+                <span class="user-name">${currentUser.name}</span>
+                ${currentUser.wcaId ? `<span class="user-wca-id">(${currentUser.wcaId})</span>` : ''}
+                <button class="logout-btn" onclick="logout()">Logout</button>
+            </div>
+        `;
+    } else {
+        userSection.innerHTML = `
+            <div class="login-section">
+                <a href="${API_BASE_URL}/auth/wca" class="login-btn">Login with WCA</a>
+            </div>
+        `;
+    }
+}
+
+// Load group selection UI
+async function loadGroupSelection() {
+    const content = document.getElementById('groupsContent');
+    
+    if (!currentUser) {
+        content.innerHTML = `
+            <div class="message-box">
+                <h3>Login Required</h3>
+                <p>Please log in with your WCA account to select groups.</p>
+                <a href="${API_BASE_URL}/auth/wca" class="login-btn">Login with WCA</a>
+            </div>
+        `;
+        return;
+    }
+    
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading available groups...</p></div>';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/groups`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            const error = await response.json();
+            throw new Error(error.error || 'Failed to load groups');
+        }
+        
+        const data = await response.json();
+        renderGroupSelection(data);
+        
+    } catch (error) {
+        console.error('Load groups error:', error);
+        content.innerHTML = `
+            <div class="message-box error">
+                <h3>Error</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Render group selection UI
+function renderGroupSelection(data) {
+    const content = document.getElementById('groupsContent');
+    
+    if (!data.availableGroups || data.availableGroups.length === 0) {
+        content.innerHTML = `
+            <div class="message-box">
+                <h3>No Groups Available</h3>
+                <p>Either you're not registered for any events with group selection, or groups haven't been configured yet.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    let html = `
+        <div class="competitor-info">
+            <h3>Welcome, ${data.person.name}!</h3>
+            <p>Select your competing groups for the events you're registered for.</p>
+        </div>
+        <div class="groups-list">
+    `;
+    
+    for (const activity of data.availableGroups) {
+        html += `
+            <div class="activity-groups">
+                <div class="activity-header">
+                    <h4>${activity.activityName}</h4>
+                    <span class="activity-meta">${activity.room} • ${formatTime(activity.startTime)} - ${formatTime(activity.endTime)}</span>
+                </div>
+                <div class="groups-grid">
+        `;
+        
+        for (const group of activity.groups) {
+            const isSelected = group.isSelected;
+            const isFull = group.isFull;
+            const canSelect = !isFull;
+            const statusClass = isSelected ? 'selected' : (isFull ? 'full' : '');
+            
+            html += `
+                <div class="group-option ${statusClass}" data-activity-id="${group.activityId}" data-group-number="${group.groupNumber}">
+                    <div class="group-header">
+                        <span class="group-number">Group ${group.groupNumber}</span>
+                        <span class="group-capacity ${isFull ? 'full' : ''}">${group.currentCount}/${group.maxCapacity}</span>
+                    </div>
+                    <div class="group-time">
+                        ${formatTime(group.startTime)} - ${formatTime(group.endTime)}
+                    </div>
+                    <button class="select-group-btn" 
+                            ${!canSelect || isSelected ? 'disabled' : ''}
+                            onclick="selectGroup(${group.activityId}, ${group.groupNumber})"
+                            data-activity-id="${group.activityId}"
+                            data-group-number="${group.groupNumber}">
+                        ${isSelected ? '✓ Selected' : (isFull ? 'Full' : 'Select')}
+                    </button>
+                </div>
+            `;
+        }
+        
+        html += `
+                </div>
+            </div>
+        `;
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+// Select a group
+async function selectGroup(activityId, groupNumber) {
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/groups/select`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            credentials: 'include',
+            body: JSON.stringify({ activityId, groupNumber })
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to select group');
+        }
+        
+        // Show success message
+        showNotification('Group selected successfully!', 'success');
+        
+        // Reload groups to show updated state
+        await loadGroupSelection();
+        
+    } catch (error) {
+        console.error('Select group error:', error);
+        showNotification(error.message, 'error');
+    }
+}
+
+// Load admin panel
+async function loadAdminPanel() {
+    const content = document.getElementById('adminContent');
+    
+    if (!isDelegate) {
+        content.innerHTML = `
+            <div class="message-box error">
+                <h3>Access Denied</h3>
+                <p>Only delegates can access this panel.</p>
+            </div>
+        `;
+        return;
+    }
+    
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading admin panel...</p></div>';
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/admin/pending-groups`, {
+            credentials: 'include'
+        });
+        
+        if (!response.ok) {
+            throw new Error('Failed to load pending groups');
+        }
+        
+        const data = await response.json();
+        renderAdminPanel(data);
+        
+    } catch (error) {
+        console.error('Load admin panel error:', error);
+        content.innerHTML = `
+            <div class="message-box error">
+                <h3>Error</h3>
+                <p>${error.message}</p>
+            </div>
+        `;
+    }
+}
+
+// Render admin panel
+function renderAdminPanel(data) {
+    const content = document.getElementById('adminContent');
+    
+    let html = `
+        <div class="admin-header">
+            <h3>Pending Group Selections</h3>
+            <p>Total selections: ${data.totalSelections}</p>
+            <button class="write-wcif-btn" onclick="writeToWCIF()">Write Groups to WCIF</button>
+        </div>
+        <div class="admin-groups-list">
+    `;
+    
+    if (data.activities.length === 0) {
+        html += '<p>No group selections yet.</p>';
+    } else {
+        for (const activity of data.activities) {
+            html += `
+                <div class="admin-activity">
+                    <h4>${activity.activityName}</h4>
+                    <div class="admin-groups">
+            `;
+            
+            for (const group of activity.groups) {
+                html += `
+                    <div class="admin-group">
+                        <div class="admin-group-header">
+                            <strong>Group ${group.groupNumber}</strong>
+                            <span class="group-count">${group.count} competitors</span>
+                        </div>
+                        <div class="admin-competitors">
+                            <ul>
+                `;
+                
+                for (const competitor of group.competitors) {
+                    html += `
+                        <li>${competitor.name} ${competitor.wcaId ? `(${competitor.wcaId})` : ''}</li>
+                    `;
+                }
+                
+                html += `
+                            </ul>
+                        </div>
+                    </div>
+                `;
+            }
+            
+            html += `
+                    </div>
+                </div>
+            `;
+        }
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+// Write groups to WCIF
+async function writeToWCIF() {
+    if (!confirm('Are you sure you want to write these group selections to the WCIF? This will update the competitor assignments on the WCA website.')) {
+        return;
+    }
+    
+    try {
+        showNotification('Writing to WCIF...', 'info');
+        
+        const response = await fetch(`${API_BASE_URL}/api/admin/write-wcif`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to write to WCIF');
+        }
+        
+        showNotification(`Successfully wrote ${data.groupsWritten} group assignments to WCIF!`, 'success');
+        
+    } catch (error) {
+        console.error('Write WCIF error:', error);
+        showNotification(error.message, 'error');
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include'
+        });
+        
+        currentUser = null;
+        isDelegate = false;
+        document.getElementById('adminTab').style.display = 'none';
+        setupUserSection();
+        
+        // Switch to schedule tab
+        document.querySelector('[data-tab="schedule"]').click();
+        
+        showNotification('Logged out successfully', 'success');
+        
+    } catch (error) {
+        console.error('Logout error:', error);
+        showNotification('Failed to logout', 'error');
+    }
+}
+
+// Utility: Format time
+function formatTime(isoString) {
+    const date = new Date(isoString);
+    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+}
+
+// Utility: Show notification
+function showNotification(message, type = 'info') {
+    const notification = document.createElement('div');
+    notification.className = `notification notification-${type}`;
+    notification.textContent = message;
+    document.body.appendChild(notification);
+    
+    setTimeout(() => {
+        notification.classList.add('show');
+    }, 10);
+    
+    setTimeout(() => {
+        notification.classList.remove('show');
+        setTimeout(() => notification.remove(), 300);
+    }, 3000);
+}
+
+// Check for login callback
+window.addEventListener('DOMContentLoaded', () => {
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('login') === 'success') {
+        showNotification('Logged in successfully!', 'success');
+        // Clean URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+    } else if (urlParams.get('login') === 'error') {
+        showNotification('Login failed. Please try again.', 'error');
+        window.history.replaceState({}, document.title, window.location.pathname);
+    }
+});

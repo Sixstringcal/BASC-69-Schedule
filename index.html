@@ -17,6 +17,7 @@
             <h1 class="comp-title" id="compTitle">Loading...</h1>
             <p class="comp-dates" id="compDates"></p>
             <p class="comp-venue" id="compVenue"></p>
+            <div class="user-section" id="userSection"></div>
         </div>
     </header>
 
@@ -36,12 +37,40 @@
             </div>
         </section>
 
-        <section class="schedule-section">
+        <!-- Navigation Tabs -->
+        <section class="nav-tabs-section">
+            <div class="container">
+                <div class="nav-tabs">
+                    <button class="nav-tab active" data-tab="schedule">Schedule</button>
+                    <button class="nav-tab" data-tab="groups">Group Selection</button>
+                    <button class="nav-tab" id="adminTab" data-tab="admin" style="display: none;">Admin</button>
+                </div>
+            </div>
+        </section>
+
+        <!-- Schedule Tab -->
+        <section class="tab-content active" id="scheduleTab">
             <div class="container">
                 <h2>Competition Schedule</h2>
                 <div class="day-tabs" id="dayTabs"></div>
                 <div class="room-legend" id="roomLegend"></div>
                 <div class="schedule-grid" id="scheduleGrid"></div>
+            </div>
+        </section>
+
+        <!-- Group Selection Tab -->
+        <section class="tab-content" id="groupsTab">
+            <div class="container">
+                <h2>Group Selection</h2>
+                <div id="groupsContent"></div>
+            </div>
+        </section>
+
+        <!-- Admin Tab -->
+        <section class="tab-content" id="adminTab">
+            <div class="container">
+                <h2>Admin: Group Management</h2>
+                <div id="adminContent"></div>
             </div>
         </section>
 
@@ -64,5 +93,12 @@
     </footer>
 
     <script src="script.js"></script>
+    <script src="groups.js"></script>
+    <script>
+        // Initialize both schedule and group selection
+        document.addEventListener('DOMContentLoaded', () => {
+            initGroupSelection();
+        });
+    </script>
 </body>
 </html>
