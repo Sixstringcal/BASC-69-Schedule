@@ -22,13 +22,16 @@ async function initGroupSelection() {
 // Check authentication status
 async function checkAuthStatus() {
     try {
+        console.log('Checking auth status...');
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
             credentials: 'include'
         });
         const data = await response.json();
+        console.log('Auth response:', data);
         
         if (data.authenticated) {
             currentUser = data.user;
+            console.log('User authenticated:', currentUser);
             
             // Check if user is a delegate
             const delegateResponse = await fetch(`${API_BASE_URL}/api/admin/check`, {
@@ -40,6 +43,8 @@ async function checkAuthStatus() {
             if (isDelegate) {
                 document.getElementById('adminTab').style.display = 'block';
             }
+        } else {
+            console.log('User not authenticated');
         }
     } catch (error) {
         console.error('Auth check error:', error);
