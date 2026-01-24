@@ -7,9 +7,13 @@ let isDelegate = false;
 
 // Initialize group selection functionality
 async function initGroupSelection() {
-    // Check if returning from OAuth login
+    // Check if returning from OAuth login with token
     const urlParams = new URLSearchParams(window.location.search);
-    if (urlParams.get('login') === 'success') {
+    const token = urlParams.get('token');
+    
+    if (token) {
+        // Store token in localStorage
+        localStorage.setItem('wca_auth_token', token);
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
     }
@@ -23,8 +27,18 @@ async function initGroupSelection() {
 async function checkAuthStatus() {
     try {
         console.log('Checking auth status...');
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
-            credentials: 'include'
+            credentials: 'include',
+            headers
         });
         const data = await response.json();
         console.log('Auth response:', data);
@@ -358,10 +372,23 @@ async function writeToWCIF() {
         }
         
         showNotification(`Successfully wrote ${data.groupsWritten} group assignments to WCIF!`, 'success');
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = {
+            'Content-Type': 'application/json'
+        };
         
-    } catch (error) {
-        console.error('Write WCIF error:', error);
-        showNotification(error.message, 'error');
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+            headers
+        });
+        
+        // Clear token from localStorage
+        localStorage.removeItem('wca_auth_token'howNotification(error.message, 'error');
     }
 }
 
