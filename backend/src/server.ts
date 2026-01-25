@@ -16,8 +16,29 @@ const pool = mysql.createPool(process.env.DATABASE_URL || '');
 
 app.locals.db = pool;
 
+// CORS - Accept both the base domain and the full path
+const allowedOrigins = [
+    'https://sixstringcal.github.io',
+    'https://sixstringcal.github.io/BASC-69-Schedule',
+    'http://localhost:8000'
+];
+
 app.use(cors({
-    origin: process.env.FRONTEND_URL || 'http://localhost:8000',
+    origin: (origin, callback) => {
+        // Allow requests with no origin (like mobile apps or curl)
+        if (!origin) return callback(null, true);
+        
+        // Check if origin starts with allowed domains
+        const isAllowed = allowedOrigins.some(allowed => 
+            origin === allowed || origin.startsWith(allowed)
+        );
+        
+        if (isAllowed) {
+            callback(null, true);
+        } else {
+            callback(new Error('Not allowed by CORS'));
+        }
+    },
     credentials: true
 }));
 
@@ -30,6 +51,7 @@ app.use(session({
     saveUninitialized: false,
     cookie: {
         secure: process.env.NODE_ENV === 'production',
+        sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'lax',
         maxAge: 24 * 60 * 60 * 1000
     }
 }));
