@@ -723,7 +723,11 @@ section h2 {
 
 .user-name {
     font-weight: 600;
-    color: var(--primary-color);
+    color: #ffffff;
+    font-size: 1.1rem;
+}
+    font-weight: 600;
+    color: #e0e0e0;
 }
 
 .user-wca-id {
