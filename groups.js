@@ -49,7 +49,8 @@ async function checkAuthStatus() {
             
             // Check if user is a delegate
             const delegateResponse = await fetch(`${API_BASE_URL}/api/admin/check`, {
-                credentials: 'include'
+                credentials: 'include',
+                headers
             });
             const delegateData = await delegateResponse.json();
             isDelegate = delegateData.isDelegate || false;
@@ -133,8 +134,13 @@ async function loadGroupSelection() {
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading available groups...</p></div>';
     
     try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
         const response = await fetch(`${API_BASE_URL}/api/groups`, {
-            credentials: 'include'
+            credentials: 'include',
+            headers
         });
         
         if (!response.ok) {
@@ -271,8 +277,13 @@ async function loadAdminPanel() {
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading admin panel...</p></div>';
     
     try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
         const response = await fetch(`${API_BASE_URL}/api/admin/pending-groups`, {
-            credentials: 'include'
+            credentials: 'include',
+            headers
         });
         
         if (!response.ok) {
@@ -360,9 +371,14 @@ async function writeToWCIF() {
     try {
         showNotification('Writing to WCIF...', 'info');
         
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
         const response = await fetch(`${API_BASE_URL}/api/admin/write-wcif`, {
             method: 'POST',
-            credentials: 'include'
+            credentials: 'include',
+            headers
         });
         
         const data = await response.json();
