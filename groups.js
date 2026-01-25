@@ -372,6 +372,18 @@ async function writeToWCIF() {
         }
         
         showNotification(`Successfully wrote ${data.groupsWritten} group assignments to WCIF!`, 'success');
+        
+        // Reload pending groups
+        await loadPendingGroups();
+    } catch (error) {
+        console.error('Write WCIF error:', error);
+        showNotification(error.message, 'error');
+    }
+}
+
+// Logout function
+async function logout() {
+    try {
         const token = localStorage.getItem('wca_auth_token');
         const headers = {
             'Content-Type': 'application/json'
@@ -388,30 +400,7 @@ async function writeToWCIF() {
         });
         
         // Clear token from localStorage
-        localStorage.removeItem('wca_auth_token';
-        
-        if (token) {
-            headers['Authorization'] = `Bearer ${token}`;
-        }
-        
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include',
-            headers
-        });
-        
-        // Clear token from localStorage
-        localStorage.removeItem('wca_auth_token'howNotification(error.message, 'error');
-    }
-}
-
-// Logout function
-async function logout() {
-    try {
-        await fetch(`${API_BASE_URL}/auth/logout`, {
-            method: 'POST',
-            credentials: 'include'
-        });
+        localStorage.removeItem('wca_auth_token');
         
         currentUser = null;
         isDelegate = false;
