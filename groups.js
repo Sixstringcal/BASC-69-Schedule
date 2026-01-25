@@ -388,6 +388,19 @@ async function writeToWCIF() {
         });
         
         // Clear token from localStorage
+        localStorage.removeItem('wca_auth_token';
+        
+        if (token) {
+            headers['Authorization'] = `Bearer ${token}`;
+        }
+        
+        await fetch(`${API_BASE_URL}/auth/logout`, {
+            method: 'POST',
+            credentials: 'include',
+            headers
+        });
+        
+        // Clear token from localStorage
         localStorage.removeItem('wca_auth_token'howNotification(error.message, 'error');
     }
 }
