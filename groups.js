@@ -233,11 +233,13 @@ function renderGroupSelection(data) {
 // Select a group
 async function selectGroup(activityId, groupNumber) {
     try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
         const response = await fetch(`${API_BASE_URL}/api/groups/select`, {
             method: 'POST',
-            headers: {
-                'Content-Type': 'application/json'
-            },
+            headers,
             credentials: 'include',
             body: JSON.stringify({ activityId, groupNumber })
         });
