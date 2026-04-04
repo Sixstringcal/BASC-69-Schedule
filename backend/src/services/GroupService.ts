@@ -68,13 +68,18 @@ class GroupService {
         for (const venue of wcif.schedule.venues) {
             for (const room of venue.rooms) {
                 for (const activity of room.activities) {
-                    const config = groupsConfig.groupSettings[activity.name];
-                    if (!config || !activity.childActivities || activity.childActivities.length === 0) {
+                    if (!activity.childActivities || activity.childActivities.length === 0) {
                         continue;
                     }
 
                     const parsed = parseActivityCode(activity.activityCode);
                     if (!parsed || !registeredEvents.includes(parsed.eventId)) {
+                        continue;
+                    }
+
+                    const configKey = `${parsed.eventId}-r${parsed.roundNumber}`;
+                    const config = groupsConfig.groupSettings[configKey];
+                    if (!config) {
                         continue;
                     }
 
