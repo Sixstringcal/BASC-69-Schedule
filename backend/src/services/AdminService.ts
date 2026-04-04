@@ -84,14 +84,16 @@ class AdminService {
 
         const wcif = await getWCIF(delegateInfo.accessToken);
 
-        const assignmentsToAdd: Record<number, any[]> = {};
-        
-        for (const selection of selections) {
-            if (!assignmentsToAdd[selection.registrantId]) {
-                assignmentsToAdd[selection.registrantId] = [];
-            }
+        // Build assignments map keyed by registrantId (null is coerced to "null" by JS)
+        // Deduplicate: last selection wins per (registrantId, activityId) pair
+        const assignmentsToAdd: Record<string, Map<number, any>> = {};
 
-            assignmentsToAdd[selection.registrantId].push({
+        for (const selection of selections) {
+            const key = String(selection.registrantId);
+            if (!assignmentsToAdd[key]) {
+                assignmentsToAdd[key] = new Map();
+            }
+            assignmentsToAdd[key].set(selection.activityId, {
                 activityId: selection.activityId,
                 assignmentCode: 'competitor',
                 stationNumber: null
@@ -102,20 +104,20 @@ class AdminService {
         // Only send persons who have group selections — sending all persons would
         // cause WCA to reconcile (and potentially delete) all existing assignments.
         const updatedPersons = wcif.persons
-            .filter(person => assignmentsToAdd[person.registrantId])
+            .filter(person => assignmentsToAdd[String(person.registrantId)])
             .map(person => {
+                const personAssignmentMap = assignmentsToAdd[String(person.registrantId)];
+                const newAssignments = Array.from(personAssignmentMap.values());
                 const baseAssignments = person.assignments || [];
                 // Remove existing competitor assignments for activities we're overwriting
                 const filteredAssignments = baseAssignments.filter(a => {
-                    const isCompetitorForSelectedActivity = 
-                        a.assignmentCode === 'competitor' && 
-                        assignmentsToAdd[person.registrantId].some(newA => newA.activityId === a.activityId);
-                    return !isCompetitorForSelectedActivity;
+                    return !(a.assignmentCode === 'competitor' && personAssignmentMap.has(a.activityId));
                 });
 
                 return {
                     wcaUserId: Number(person.wcaUserId),
-                    assignments: [...filteredAssignments, ...assignmentsToAdd[person.registrantId]]
+                    registrantId: person.registrantId,
+                    assignments: [...filteredAssignments, ...newAssignments]
                 };
             });
 

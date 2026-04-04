@@ -1,8 +1,9 @@
 import express, { Request, Response } from 'express';
+import axios from 'axios';
 import { isAuthenticated, isDelegate } from '../middleware/auth';
 import AdminService from '../services/AdminService';
 import AuthService from '../services/AuthService';
-import { refreshAccessToken } from '../utils/wcif';
+import { refreshAccessToken, WCA_ORIGIN, COMPETITION_ID } from '../utils/wcif';
 
 const router = express.Router();
 
@@ -66,7 +67,9 @@ router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res
         }
     } catch (error: any) {
         console.error('Write WCIF error status:', error.response?.status);
-        console.error('Write WCIF error body:', JSON.stringify(error.response?.data)?.substring(0, 500) || error.message);
+        const errBody = error.response?.data;
+        const errBodyStr = typeof errBody === 'string' ? errBody : JSON.stringify(errBody);
+        console.error('Write WCIF error body (first 2000 chars):', errBodyStr?.substring(0, 2000) || error.message);
         
         if (error.message?.includes('No group selections')) {
             return res.status(400).json({ error: error.message });
@@ -76,6 +79,33 @@ router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res
             error: 'Failed to write groups to WCIF',
             details: error.response?.data || error.message
         });
+    }
+});
+
+// Diagnostic endpoint: sends { persons: [] } to WCA to test if competition.save!
+// itself is causing the 500, separate from any persons/assignments data.
+router.post('/test-wcif-write', isAuthenticated, isDelegate, async (req: Request, res: Response) => {
+    try {
+        const accessToken = req.accessToken!;
+        console.log('[test-wcif-write] Sending empty persons array to WCA...');
+        const response = await axios.patch(
+            `${WCA_ORIGIN}/api/v0/competitions/${COMPETITION_ID}/wcif`,
+            { persons: [] },
+            {
+                headers: {
+                    'Authorization': `Bearer ${accessToken}`,
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        console.log('[test-wcif-write] Success:', response.status, response.data);
+        res.json({ success: true, status: response.status, data: response.data });
+    } catch (error: any) {
+        const status = error.response?.status;
+        const data = error.response?.data;
+        const dataStr = typeof data === 'string' ? data.substring(0, 1000) : JSON.stringify(data);
+        console.error('[test-wcif-write] Failed:', status, dataStr);
+        res.json({ success: false, status, data: dataStr });
     }
 });
 
