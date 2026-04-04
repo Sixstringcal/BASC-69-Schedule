@@ -71,7 +71,7 @@ router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res
         const errBodyStr = typeof errBody === 'string' ? errBody : JSON.stringify(errBody);
         console.error('Write WCIF error body (first 2000 chars):', errBodyStr?.substring(0, 2000) || error.message);
         
-        if (error.message?.includes('No group selections')) {
+        if (error.message?.includes('No group selections') || error.message?.includes('ActivityIds') || error.message?.includes('do not exist')) {
             return res.status(400).json({ error: error.message });
         }
         

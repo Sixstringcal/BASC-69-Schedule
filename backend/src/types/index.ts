@@ -14,7 +14,7 @@ export interface AuthenticatedRequest extends Request {
 }
 
 export interface Person {
-  registrantId: number;
+  registrantId: number | null;
   name: string;
   wcaId: string;
   wcaUserId: string;

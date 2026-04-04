@@ -100,13 +100,39 @@ class AdminService {
             });
         }
 
-        // WCA looks up persons by wcaUserId (not registrantId), so we must include it.
-        // Only send persons who have group selections — sending all persons would
-        // cause WCA to reconcile (and potentially delete) all existing assignments.
+        // Validate that all activityIds exist in the WCIF schedule before sending.
+        // Sending invalid activityIds causes WCA to return a 500 with no details.
+        const allScheduleActivityIds = new Set<number>();
+        for (const venue of (wcif.schedule?.venues || [])) {
+            for (const room of venue.rooms) {
+                for (const activity of room.activities) {
+                    allScheduleActivityIds.add(activity.id);
+                    for (const child of (activity.childActivities || [])) {
+                        allScheduleActivityIds.add(child.id);
+                    }
+                }
+            }
+        }
+
+        const invalidActivityIds: number[] = [];
+        for (const [, assignmentMap] of Object.entries(assignmentsToAdd)) {
+            for (const activityId of assignmentMap.keys()) {
+                if (!allScheduleActivityIds.has(activityId)) {
+                    invalidActivityIds.push(activityId);
+                }
+            }
+        }
+        if (invalidActivityIds.length > 0) {
+            throw new Error(`ActivityIds [${[...new Set(invalidActivityIds)].join(', ')}] do not exist in the WCIF schedule. The schedule may not have group sub-activities set up yet.`);
+        }
+
+        // Only send registered competitors (registrantId must be non-null).
+        // Delegates/organizers with no registration (registrantId: null) cannot
+        // have competitor assignments and including them causes a WCA 500.
         const updatedPersons = wcif.persons
-            .filter(person => assignmentsToAdd[String(person.registrantId)])
+            .filter(person => person.registrantId !== null && assignmentsToAdd[String(person.registrantId)])
             .map(person => {
-                const personAssignmentMap = assignmentsToAdd[String(person.registrantId)];
+                const personAssignmentMap = assignmentsToAdd[String(person.registrantId!)];
                 const newAssignments = Array.from(personAssignmentMap.values());
                 const baseAssignments = person.assignments || [];
                 // Remove existing competitor assignments for activities we're overwriting
