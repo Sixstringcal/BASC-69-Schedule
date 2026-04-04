@@ -74,9 +74,21 @@ router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res
         if (error.message?.includes('No group selections') || error.message?.includes('ActivityIds') || error.message?.includes('do not exist')) {
             return res.status(400).json({ error: error.message });
         }
+
+        // Try to extract WCA request ID from their HTML error page for WST reporting
+        let wcaRequestId: string | null = null;
+        if (typeof errBodyStr === 'string' && errBodyStr.includes('Request ID:')) {
+            const match = errBodyStr.match(/Request ID:\s*([a-f0-9-]{36})/i);
+            if (match) wcaRequestId = match[1];
+        }
         
         res.status(500).json({ 
             error: 'Failed to write groups to WCIF',
+            wcaError: `WCA returned HTTP ${error.response?.status || 'unknown'}. This appears to be a WCA server-side issue unrelated to your payload.`,
+            wcaRequestId: wcaRequestId || undefined,
+            reportUrl: wcaRequestId 
+                ? `https://www.worldcubeassociation.org/contact?contactRecipient=wst&requestId=${wcaRequestId}`
+                : undefined,
             details: error.response?.data || error.message
         });
     }
@@ -106,6 +118,19 @@ router.post('/test-wcif-write', isAuthenticated, isDelegate, async (req: Request
         const dataStr = typeof data === 'string' ? data.substring(0, 1000) : JSON.stringify(data);
         console.error('[test-wcif-write] Failed:', status, dataStr);
         res.json({ success: false, status, data: dataStr });
+    }
+});
+
+router.delete('/clear-selections', isAuthenticated, isDelegate, async (req: Request, res: Response) => {
+    try {
+        const db = req.app.locals.db;
+        const [result]: any = await db.execute('DELETE FROM group_selections');
+        const deleted = result.affectedRows ?? 0;
+        console.log(`[clear-selections] Deleted ${deleted} group selection(s)`);
+        res.json({ success: true, deleted });
+    } catch (error) {
+        console.error('Clear selections error:', error);
+        res.status(500).json({ error: 'Failed to clear group selections' });
     }
 });
 

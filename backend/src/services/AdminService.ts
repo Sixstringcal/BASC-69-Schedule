@@ -135,9 +135,12 @@ class AdminService {
                 const personAssignmentMap = assignmentsToAdd[String(person.registrantId!)];
                 const newAssignments = Array.from(personAssignmentMap.values());
                 const baseAssignments = person.assignments || [];
-                // Remove existing competitor assignments for activities we're overwriting
+                // Remove ALL existing assignments for activities we're overwriting.
+                // A person can have both staff and competitor assignments for the same
+                // activityId, which causes a DB constraint error on WCA's side when
+                // we try to save both. Replace entirely with the user's selection.
                 const filteredAssignments = baseAssignments.filter(a => {
-                    return !(a.assignmentCode === 'competitor' && personAssignmentMap.has(a.activityId));
+                    return !personAssignmentMap.has(a.activityId);
                 });
 
                 return {

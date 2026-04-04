@@ -317,6 +317,7 @@ function renderAdminPanel(data) {
             <h3>Pending Group Selections</h3>
             <p>Total selections: ${data.totalSelections}</p>
             <button class="write-wcif-btn" onclick="writeToWCIF()">Write Groups to WCIF</button>
+            <button class="clear-selections-btn" onclick="clearSelections()">Clear All Selections</button>
         </div>
         <div class="admin-groups-list">
     `;
@@ -388,7 +389,20 @@ async function writeToWCIF() {
         const data = await response.json();
         
         if (!response.ok) {
-            throw new Error(data.error || 'Failed to write to WCIF');
+            if (data.wcaRequestId) {
+                const reportLink = data.reportUrl
+                    ? `<a href="${data.reportUrl}" target="_blank" style="color:#fff;text-decoration:underline">Report to WCA WST</a>`
+                    : '';
+                showNotification(
+                    `WCA server error (Request ID: ${data.wcaRequestId}). ${reportLink}`,
+                    'error',
+                    12000,
+                    true
+                );
+            } else {
+                throw new Error(data.error || 'Failed to write to WCIF');
+            }
+            return;
         }
         
         showNotification(`Successfully wrote ${data.groupsWritten} group assignments to WCIF!`, 'success');
@@ -397,6 +411,34 @@ async function writeToWCIF() {
         await loadPendingGroups();
     } catch (error) {
         console.error('Write WCIF error:', error);
+        showNotification(error.message, 'error');
+    }
+}
+
+// Clear all group selections from DB
+async function clearSelections() {
+    if (!confirm('Delete ALL group selections from the database? This cannot be undone.')) {
+        return;
+    }
+    
+    try {
+        showNotification('Clearing selections...', 'info');
+        
+        const response = await fetch(`${API_BASE_URL}/api/admin/clear-selections`, {
+            method: 'DELETE',
+            credentials: 'include'
+        });
+        
+        const data = await response.json();
+        
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to clear selections');
+        }
+        
+        showNotification(`Cleared ${data.deleted} group selection(s).`, 'success');
+        await loadPendingGroups();
+    } catch (error) {
+        console.error('Clear selections error:', error);
         showNotification(error.message, 'error');
     }
 }
@@ -445,10 +487,14 @@ function formatTime(isoString) {
 }
 
 // Utility: Show notification
-function showNotification(message, type = 'info') {
+function showNotification(message, type = 'info', duration = 3000, isHTML = false) {
     const notification = document.createElement('div');
     notification.className = `notification notification-${type}`;
-    notification.textContent = message;
+    if (isHTML) {
+        notification.innerHTML = message;
+    } else {
+        notification.textContent = message;
+    }
     document.body.appendChild(notification);
     
     setTimeout(() => {
@@ -458,7 +504,7 @@ function showNotification(message, type = 'info') {
     setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
-    }, 3000);
+    }, duration);
 }
 
 // Check for login callback
