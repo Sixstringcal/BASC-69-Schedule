@@ -69,7 +69,15 @@ router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res
         console.error('Write WCIF error status:', error.response?.status);
         const errBody = error.response?.data;
         const errBodyStr = typeof errBody === 'string' ? errBody : JSON.stringify(errBody);
-        console.error('Write WCIF error body (first 5000 chars):', errBodyStr?.substring(0, 5000) || error.message);
+        
+        // Log as much of the error body as possible; for HTML pages search for meaningful content
+        if (typeof errBodyStr === 'string' && errBodyStr.includes('<!DOCTYPE')) {
+            // WCA HTML error page — extract the visible text content between tags
+            const textContent = errBodyStr.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim();
+            console.error('Write WCIF error (HTML page text):', textContent.substring(0, 3000));
+        } else {
+            console.error('Write WCIF error body:', errBodyStr?.substring(0, 5000) || error.message);
+        }
         
         if (error.message?.includes('No group selections') || error.message?.includes('ActivityIds') || error.message?.includes('do not exist')) {
             return res.status(400).json({ error: error.message });

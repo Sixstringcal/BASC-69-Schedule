@@ -184,18 +184,45 @@ class AdminService {
                     }
                 }
 
+                // Skip persons whose assignments are completely unchanged — sending
+                // a no-op person can still trigger WCA DB operations that error.
+                const assignmentsChanged =
+                    finalAssignments.length !== baseAssignments.length ||
+                    finalAssignments.some(fa =>
+                        !baseAssignments.some(ba =>
+                            ba.activityId === fa.activityId &&
+                            ba.assignmentCode === fa.assignmentCode &&
+                            ba.stationNumber === fa.stationNumber
+                        )
+                    );
+
+                if (!assignmentsChanged) {
+                    console.log(`[writeToWCIF] Person ${person.wcaUserId} (registrantId ${person.registrantId}): all assignments unchanged, skipping from payload.`);
+                    return null;
+                }
+
                 return {
                     wcaUserId: Number(person.wcaUserId),
                     registrantId: person.registrantId,
                     assignments: finalAssignments
                 };
-            });
+            })
+            .filter(p => p !== null);
 
         if (conflictWarnings.length > 0) {
             console.warn('[writeToWCIF] Skipped conflicting assignments (existing non-competitor roles preserved):');
             for (const w of conflictWarnings) {
                 console.warn('[writeToWCIF]  -', w);
             }
+        }
+
+        if (updatedPersons.length === 0) {
+            console.log('[writeToWCIF] All persons\' assignments are already up-to-date in WCA — no PATCH needed.');
+            return {
+                success: true,
+                message: 'All assignments are already up-to-date in WCA (no changes to write)',
+                groupsWritten: 0
+            };
         }
 
         const [writeResult] = await db.query<any>(
