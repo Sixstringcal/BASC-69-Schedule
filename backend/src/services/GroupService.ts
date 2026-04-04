@@ -54,7 +54,7 @@ class GroupService {
                 .map(a => a.activityId)
         );
 
-        const selections = await GroupSelectionModel.findByRegistrantId(db, person.registrantId);
+        const selections = await GroupSelectionModel.findByRegistrantId(db, person.registrantId!);
         const userSelections: Record<number, number> = {};
         selections.forEach(sel => {
             userSelections[sel.activityId] = sel.groupNumber;
@@ -125,7 +125,7 @@ class GroupService {
 
         return {
             person: {
-                registrantId: person.registrantId,
+                registrantId: person.registrantId!,
                 name: person.name,
                 wcaId: person.wcaId,
                 eventIds: registeredEvents
@@ -161,7 +161,7 @@ class GroupService {
         }
 
         await GroupSelectionModel.createOrUpdate(db, {
-            registrantId: person.registrantId,
+            registrantId: person.registrantId!,
             wcaUserId: wcaUserId,
             activityId: activityId,
             activityName: activityInfo.activity.name,
