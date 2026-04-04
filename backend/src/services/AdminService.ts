@@ -129,26 +129,74 @@ class AdminService {
         // Only send registered competitors (registrantId must be non-null).
         // Delegates/organizers with no registration (registrantId: null) cannot
         // have competitor assignments and including them causes a WCA 500.
+        const conflictWarnings: string[] = [];
         const updatedPersons = wcif.persons
             .filter(person => person.registrantId !== null && assignmentsToAdd[String(person.registrantId)])
             .map(person => {
                 const personAssignmentMap = assignmentsToAdd[String(person.registrantId!)];
-                const newAssignments = Array.from(personAssignmentMap.values());
                 const baseAssignments = person.assignments || [];
-                // Remove ALL existing assignments for activities we're overwriting.
-                // A person can have both staff and competitor assignments for the same
-                // activityId, which causes a DB constraint error on WCA's side when
-                // we try to save both. Replace entirely with the user's selection.
-                const filteredAssignments = baseAssignments.filter(a => {
-                    return !personAssignmentMap.has(a.activityId);
-                });
+
+                // Build a lookup of existing WCA assignments by activityId.
+                const existingByActivityId = new Map<number, any>();
+                for (const a of baseAssignments) {
+                    existingByActivityId.set(a.activityId, a);
+                }
+
+                const finalAssignments: any[] = [];
+
+                // 1. Keep all existing assignments for activityIds NOT in our selection.
+                for (const existing of baseAssignments) {
+                    if (!personAssignmentMap.has(existing.activityId)) {
+                        finalAssignments.push(existing);
+                    }
+                }
+
+                // 2. Handle activityIds we want to write.
+                //
+                // WCA's update_persons_wcif! uses wcif_equal? (checks activityId,
+                // stationNumber, AND assignmentCode) to find existing assignments.
+                // If the codes DIFFER, WCA calls .build() which creates a new AR
+                // object with id: nil. upsert_all then issues INSERT ... id=NULL which
+                // violates PostgreSQL's NOT NULL constraint → 500.
+                //
+                // Workaround: if an existing WCA assignment has a DIFFERENT code for
+                // an activityId we want (e.g., staff-delegate vs competitor), preserve
+                // the existing assignment unchanged rather than creating a nil-id record.
+                // For fresh competitions where all assignments are new this path is
+                // never hit — all assignments build cleanly and upsert_all succeeds.
+                for (const [activityId, newAssignment] of personAssignmentMap.entries()) {
+                    const existing = existingByActivityId.get(activityId);
+                    if (existing && existing.assignmentCode !== newAssignment.assignmentCode) {
+                        // Conflicting: preserve existing assignment to avoid nil-id bug.
+                        finalAssignments.push(existing);
+                        conflictWarnings.push(
+                            `Person ${person.wcaUserId} (registrantId ${person.registrantId}): ` +
+                            `activityId ${activityId} already has '${existing.assignmentCode}' in WCA — ` +
+                            `keeping existing assignment (cannot change to '${newAssignment.assignmentCode}')`
+                        );
+                    } else {
+                        // No conflict: add our new assignment.
+                        // If existing has the SAME code, wcif_equal? will match in WCA
+                        // and update in-place (real id, no nil-id problem).
+                        // If no existing assignment, WCA builds a new one (id: nil) — this
+                        // works correctly when there are no real-id records in the same batch.
+                        finalAssignments.push(newAssignment);
+                    }
+                }
 
                 return {
                     wcaUserId: Number(person.wcaUserId),
                     registrantId: person.registrantId,
-                    assignments: [...filteredAssignments, ...newAssignments]
+                    assignments: finalAssignments
                 };
             });
+
+        if (conflictWarnings.length > 0) {
+            console.warn('[writeToWCIF] Skipped conflicting assignments (existing non-competitor roles preserved):');
+            for (const w of conflictWarnings) {
+                console.warn('[writeToWCIF]  -', w);
+            }
+        }
 
         const [writeResult] = await db.query<any>(
             'INSERT INTO wcif_writes (delegate_wca_user_id, delegate_name, write_status, groups_written) VALUES (?, ?, ?, ?)',
