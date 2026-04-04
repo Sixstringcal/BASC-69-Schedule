@@ -204,10 +204,10 @@ function renderSchedule(dayIndex) {
     const venue = wcifData.schedule.venues[0];
     const timezone = venue.timezone;
     
-    // Calculate the target date for this day index in local timezone
-    const startDate = new Date(wcifData.schedule.startDate + 'T00:00:00');
+    // Calculate the target date for this day index in UTC to avoid local timezone shifting
+    const startDate = new Date(wcifData.schedule.startDate + 'T00:00:00Z');
     const targetDate = new Date(startDate);
-    targetDate.setDate(targetDate.getDate() + dayIndex);
+    targetDate.setUTCDate(targetDate.getUTCDate() + dayIndex);
     const targetDateStr = targetDate.toISOString().split('T')[0]; // YYYY-MM-DD format
     
     // Collect all activities for this day, grouped by room (only visible rooms)
