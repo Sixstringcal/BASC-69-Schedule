@@ -65,7 +65,8 @@ router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res
             }
         }
     } catch (error: any) {
-        console.error('Write WCIF error:', error.response?.data || error.message);
+        console.error('Write WCIF error status:', error.response?.status);
+        console.error('Write WCIF error body:', JSON.stringify(error.response?.data)?.substring(0, 500) || error.message);
         
         if (error.message?.includes('No group selections')) {
             return res.status(400).json({ error: error.message });

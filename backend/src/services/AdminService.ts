@@ -99,6 +99,9 @@ class AdminService {
         }
 
         const updatedPersons = wcif.persons.map(person => {
+            // Strip private/read-only fields that WCA rejects in PATCH requests
+            const { birthdate, email, personalBests, avatar, ...patchablePerson } = person as any;
+
             if (assignmentsToAdd[person.registrantId]) {
                 const existingAssignments = (person.assignments || []).filter(a => {
                     const isCompetitorForSelectedActivity = 
@@ -108,11 +111,11 @@ class AdminService {
                 });
 
                 return {
-                    ...person,
+                    ...patchablePerson,
                     assignments: [...existingAssignments, ...assignmentsToAdd[person.registrantId]]
                 };
             }
-            return person;
+            return patchablePerson;
         });
 
         const [writeResult] = await db.query<any>(
