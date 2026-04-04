@@ -93,8 +93,7 @@ class AdminService {
 
             assignmentsToAdd[selection.registrantId].push({
                 activityId: selection.activityId,
-                assignmentCode: 'competitor',
-                stationNumber: null
+                assignmentCode: 'competitor'
             });
         }
 
