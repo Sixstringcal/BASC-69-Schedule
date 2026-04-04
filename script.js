@@ -1,5 +1,5 @@
 // API Configuration
-const API_URL = 'https://api.worldcubeassociation.org/competitions/BayAreaSpeedcubin692026/wcif/public';
+const API_URL = 'https://api.worldcubeassociation.org/competitions/BelmontSpring2026/wcif/public';
 
 // Event name mapping
 const EVENT_NAMES = {
