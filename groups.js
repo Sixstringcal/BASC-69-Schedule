@@ -56,7 +56,7 @@ async function checkAuthStatus() {
             isDelegate = delegateData.isDelegate || false;
             
             if (isDelegate) {
-                document.getElementById('adminTab').style.display = 'block';
+                document.getElementById('adminTabBtn').style.display = 'block';
             }
         } else {
             console.log('User not authenticated');
@@ -424,7 +424,7 @@ async function logout() {
         
         currentUser = null;
         isDelegate = false;
-        document.getElementById('adminTab').style.display = 'none';
+        document.getElementById('adminTabBtn').style.display = 'none';
         setupUserSection();
         
         // Switch to schedule tab
