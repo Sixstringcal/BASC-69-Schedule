@@ -79,9 +79,7 @@ class GroupService {
 
                     const configKey = `${parsed.eventId}-r${parsed.roundNumber}`;
                     const config = groupsConfig.groupSettings[configKey];
-                    if (!config) {
-                        continue;
-                    }
+                    const maxPerGroup = config?.maxPerGroup ?? 9999;
 
                     const groups: GroupInfo[] = [];
                     for (const groupActivity of activity.childActivities) {
@@ -89,7 +87,7 @@ class GroupService {
                         if (!groupParsed || !groupParsed.groupNumber) continue;
 
                         const currentCount = (countMap[groupActivity.id]?.[groupParsed.groupNumber]) || 0;
-                        const maxCapacity = config.maxPerGroup || 24;
+                        const maxCapacity = maxPerGroup;
 
                         groups.push({
                             activityId: groupActivity.id,

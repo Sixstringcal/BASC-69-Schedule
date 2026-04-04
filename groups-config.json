@@ -17,7 +17,7 @@
     }
   },
   "fieldDefinitions": {
-    "maxPerGroup": "Maximum number of competitors per group (default: 24)"
+    "maxPerGroup": "Maximum number of competitors per group (optional, defaults to no limit)"
   },
-  "instructions": "Add entries for any event/round that should have group selection. Use the WCA activity code format: {eventId}-r{roundNumber} (e.g. '333-r1', '222-r2')."
+  "instructions": "OPTIONAL: Add entries to override maxPerGroup for specific events/rounds. All rounds with child groups in the WCIF schedule are automatically available for group selection. Use the WCA activity code format: {eventId}-r{roundNumber} (e.g. '666-r1', 'minx-r1')."
 }
