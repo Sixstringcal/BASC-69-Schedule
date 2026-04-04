@@ -16,7 +16,8 @@ let groupsConfigCache: GroupsConfig | null = null;
 
 export async function getWCIF(accessToken: string | null = null): Promise<WCIF> {
     const now = Date.now();
-    if (wcifCache && (now - wcifCacheTime) < CACHE_DURATION) {
+    // Only use cache for unauthenticated (public) requests
+    if (!accessToken && wcifCache && (now - wcifCacheTime) < CACHE_DURATION) {
         return wcifCache;
     }
     
@@ -30,9 +31,11 @@ export async function getWCIF(accessToken: string | null = null): Promise<WCIF> 
             : {};
             
         const response = await axios.get<WCIF>(url, config);
-        wcifCache = response.data;
-        wcifCacheTime = now;
-        return wcifCache;
+        if (!accessToken) {
+            wcifCache = response.data;
+            wcifCacheTime = now;
+        }
+        return response.data;
     } catch (error: any) {
         console.error('Failed to fetch WCIF:', error.message);
         throw error;
