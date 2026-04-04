@@ -11,7 +11,7 @@ passport.use('wca', new OAuth2Strategy({
     clientID: process.env.WCA_CLIENT_ID || '',
     clientSecret: process.env.WCA_CLIENT_SECRET || '',
     callbackURL: process.env.WCA_CALLBACK_URL || '',
-    scope: ['public', 'email']
+    scope: ['public', 'email', 'manage_competitions']
 }, async (accessToken: string, refreshToken: string, _profile: any, done: any) => {
     try {
         const response = await axios.get(`${WCA_ORIGIN}/api/v0/me`, {

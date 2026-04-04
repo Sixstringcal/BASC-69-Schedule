@@ -2,6 +2,7 @@ import express, { Request, Response } from 'express';
 import { isAuthenticated, isDelegate } from '../middleware/auth';
 import AdminService from '../services/AdminService';
 import AuthService from '../services/AuthService';
+import { refreshAccessToken } from '../utils/wcif';
 
 const router = express.Router();
 
@@ -34,19 +35,39 @@ router.get('/pending-groups', isAuthenticated, isDelegate, async (req: Request, 
 router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res: Response) => {
     try {
         const db = req.app.locals.db;
+        const wcaUserId = req.session.wcaUserId!;
+        let accessToken = req.accessToken!;
+
         const delegateInfo = {
-            wcaUserId: req.session.wcaUserId!,
+            wcaUserId,
             name: req.session.name!,
-            accessToken: req.accessToken!
+            accessToken
         };
         
-        const result = await AdminService.writeToWCIF(db, delegateInfo);
-        res.json(result);
-        
+        try {
+            const result = await AdminService.writeToWCIF(db, delegateInfo);
+            res.json(result);
+        } catch (writeError: any) {
+            const isAuthError = writeError.response?.status === 401 ||
+                writeError.response?.data?.error === 'Please log in';
+
+            if (isAuthError) {
+                // Try refreshing the token and retrying once
+                const newToken = await refreshAccessToken(db, wcaUserId);
+                if (newToken) {
+                    const result = await AdminService.writeToWCIF(db, { ...delegateInfo, accessToken: newToken });
+                    res.json(result);
+                } else {
+                    res.status(401).json({ error: 'Your WCA session has expired. Please log out and log in again.' });
+                }
+            } else {
+                throw writeError;
+            }
+        }
     } catch (error: any) {
         console.error('Write WCIF error:', error.response?.data || error.message);
         
-        if (error.message.includes('No group selections')) {
+        if (error.message?.includes('No group selections')) {
             return res.status(400).json({ error: error.message });
         }
         
