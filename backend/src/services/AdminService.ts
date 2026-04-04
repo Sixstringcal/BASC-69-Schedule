@@ -98,12 +98,14 @@ class AdminService {
             });
         }
 
-        const updatedPersons = wcif.persons.map(person => {
-            // Send only registrantId + assignments to avoid crashing WCA's deserializer
-            // with unexpected or read-only fields present in the full private WCIF
-            const baseAssignments = person.assignments || [];
-
-            if (assignmentsToAdd[person.registrantId]) {
+        // WCA looks up persons by wcaUserId (not registrantId), so we must include it.
+        // Only send persons who have group selections — sending all persons would
+        // cause WCA to reconcile (and potentially delete) all existing assignments.
+        const updatedPersons = wcif.persons
+            .filter(person => assignmentsToAdd[person.registrantId])
+            .map(person => {
+                const baseAssignments = person.assignments || [];
+                // Remove existing competitor assignments for activities we're overwriting
                 const filteredAssignments = baseAssignments.filter(a => {
                     const isCompetitorForSelectedActivity = 
                         a.assignmentCode === 'competitor' && 
@@ -112,15 +114,10 @@ class AdminService {
                 });
 
                 return {
-                    registrantId: person.registrantId,
+                    wcaUserId: Number(person.wcaUserId),
                     assignments: [...filteredAssignments, ...assignmentsToAdd[person.registrantId]]
                 };
-            }
-            return {
-                registrantId: person.registrantId,
-                assignments: baseAssignments
-            };
-        });
+            });
 
         const [writeResult] = await db.query<any>(
             'INSERT INTO wcif_writes (delegate_wca_user_id, delegate_name, write_status, groups_written) VALUES (?, ?, ?, ?)',
@@ -128,6 +125,9 @@ class AdminService {
         );
 
         const writeId = writeResult.insertId;
+
+        console.log(`[writeToWCIF] Sending ${updatedPersons.length} person(s) to WCA.`);
+        console.log('[writeToWCIF] Payload:', JSON.stringify({ persons: updatedPersons }, null, 2).substring(0, 2000));
 
         try {
             await axios.patch(
