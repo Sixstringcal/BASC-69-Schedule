@@ -149,13 +149,11 @@ class GroupService {
 
         const groupsConfig = await getGroupsConfig();
         const parentActivity = activityInfo.parent || activityInfo.activity;
-        const config = groupsConfig.groupSettings[parentActivity.name];
+        const parsed = parseActivityCode(parentActivity.activityCode);
+        const configKey = parsed ? `${parsed.eventId}-r${parsed.roundNumber}` : null;
+        const config = configKey ? groupsConfig.groupSettings[configKey] : null;
 
-        if (!config) {
-            throw new Error('This activity does not have group selection enabled');
-        }
-
-        const maxCapacity = config.maxPerGroup || 24;
+        const maxCapacity = config?.maxPerGroup ?? 9999;
         const currentCount = await GroupSelectionModel.countByActivityAndGroup(db, activityId, groupNumber);
         
         if (currentCount >= maxCapacity) {
