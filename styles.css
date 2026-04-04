@@ -889,6 +889,18 @@ section h2 {
     background: #f0f8e8;
 }
 
+.group-option.assigned {
+    border-color: #2563eb;
+    background: #eff6ff;
+}
+
+.assigned-badge {
+    font-size: 0.8em;
+    color: #2563eb;
+    font-weight: 600;
+    margin-bottom: 8px;
+}
+
 .group-option.full {
     background: #f8f8f8;
     border-color: var(--text-light);

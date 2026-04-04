@@ -196,9 +196,10 @@ function renderGroupSelection(data) {
         
         for (const group of activity.groups) {
             const isSelected = group.isSelected;
+            const isAssigned = group.isAssigned;
             const isFull = group.isFull;
             const canSelect = !isFull;
-            const statusClass = isSelected ? 'selected' : (isFull ? 'full' : '');
+            const statusClass = isAssigned ? 'assigned' : (isSelected ? 'selected' : (isFull ? 'full' : ''));
             
             html += `
                 <div class="group-option ${statusClass}" data-activity-id="${group.activityId}" data-group-number="${group.groupNumber}">
@@ -209,12 +210,13 @@ function renderGroupSelection(data) {
                     <div class="group-time">
                         ${formatTime(group.startTime)} - ${formatTime(group.endTime)}
                     </div>
+                    ${isAssigned ? '<div class="assigned-badge">📋 Already Assigned</div>' : ''}
                     <button class="select-group-btn" 
-                            ${!canSelect || isSelected ? 'disabled' : ''}
+                            ${!canSelect || isSelected || isAssigned ? 'disabled' : ''}
                             onclick="selectGroup(${group.activityId}, ${group.groupNumber})"
                             data-activity-id="${group.activityId}"
                             data-group-number="${group.groupNumber}">
-                        ${isSelected ? '✓ Selected' : (isFull ? 'Full' : 'Select')}
+                        ${isAssigned ? '✓ Assigned' : (isSelected ? '✓ Selected' : (isFull ? 'Full' : 'Select'))}
                     </button>
                 </div>
             `;

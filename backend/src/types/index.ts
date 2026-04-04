@@ -119,6 +119,7 @@ export interface GroupInfo {
   maxCapacity: number;
   isFull: boolean;
   isSelected: boolean;
+  isAssigned: boolean;
 }
 
 export interface AvailableGroup {

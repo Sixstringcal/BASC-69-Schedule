@@ -46,7 +46,14 @@ class GroupService {
 
         const registeredEvents = person.registration.eventIds || [];
         const groupsConfig = await getGroupsConfig();
-        
+
+        // Build set of activity IDs where this person is assigned as a competitor
+        const assignedActivityIds = new Set<number>(
+            (person.assignments || [])
+                .filter(a => a.assignmentCode === 'competitor')
+                .map(a => a.activityId)
+        );
+
         const selections = await GroupSelectionModel.findByRegistrantId(db, person.registrantId);
         const userSelections: Record<number, number> = {};
         selections.forEach(sel => {
@@ -97,7 +104,8 @@ class GroupService {
                             currentCount,
                             maxCapacity,
                             isFull: currentCount >= maxCapacity,
-                            isSelected: userSelections[groupActivity.id] === groupParsed.groupNumber
+                            isSelected: userSelections[groupActivity.id] === groupParsed.groupNumber,
+                            isAssigned: assignedActivityIds.has(groupActivity.id)
                         });
                     }
 
