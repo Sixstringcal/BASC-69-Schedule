@@ -212,11 +212,11 @@ function renderGroupSelection(data) {
                     </div>
                     ${isAssigned ? '<div class="assigned-badge">📋 Already Assigned</div>' : ''}
                     <button class="select-group-btn"
-                            ${!canSelect || isSelected ? 'disabled' : ''}
-                            onclick="selectGroup(${group.activityId}, ${group.groupNumber})"
+                            ${!canSelect && !isSelected ? 'disabled' : ''}
+                            onclick="${isSelected ? `deselectGroup(${group.activityId})` : `selectGroup(${group.activityId}, ${group.groupNumber})`}"
                             data-activity-id="${group.activityId}"
                             data-group-number="${group.groupNumber}">
-                        ${isSelected ? '✓ Selected' : (isFull ? 'Full' : 'Select')}
+                        ${isSelected ? '✓ Selected (click to remove)' : (isFull ? 'Full' : 'Select')}
                     </button>
                 </div>
             `;
@@ -260,6 +260,35 @@ async function selectGroup(activityId, groupNumber) {
         
     } catch (error) {
         console.error('Select group error:', error);
+        showNotification(error.message, 'error');
+    }
+}
+
+// Deselect a group
+async function deselectGroup(activityId) {
+    try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE_URL}/api/groups/select`, {
+            method: 'DELETE',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({ activityId })
+        });
+
+        const data = await response.json();
+
+        if (!response.ok) {
+            throw new Error(data.error || 'Failed to deselect group');
+        }
+
+        showNotification('Group selection removed.', 'success');
+        await loadGroupSelection();
+
+    } catch (error) {
+        console.error('Deselect group error:', error);
         showNotification(error.message, 'error');
     }
 }

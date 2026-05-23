@@ -137,7 +137,7 @@ class GroupService {
     static async selectGroup(db: Pool, wcaUserId: string, activityId: number, groupNumber: number): Promise<SelectGroupResponse> {
         const wcif = await getWCIF();
         const person = await getPersonByWcaUserId(wcif, wcaUserId, db);
-        
+
         if (!person) {
             throw new Error('Not registered for this competition');
         }
@@ -155,10 +155,17 @@ class GroupService {
 
         const maxCapacity = config?.maxPerGroup ?? 9999;
         const currentCount = await GroupSelectionModel.countByActivityAndGroup(db, activityId, groupNumber);
-        
+
         if (currentCount >= maxCapacity) {
             throw new Error('Group is full');
         }
+
+        // Remove any existing selection for a sibling group in the same round
+        // so a competitor can only have one pending selection per event/round.
+        const siblingIds = (parentActivity.childActivities || [])
+            .map((c: any) => c.id as number)
+            .filter((id: number) => id !== activityId);
+        await GroupSelectionModel.deleteSiblingSelections(db, wcaUserId, siblingIds);
 
         await GroupSelectionModel.createOrUpdate(db, {
             registrantId: person.registrantId!,
@@ -178,6 +185,11 @@ class GroupService {
                 maxCapacity
             }
         };
+    }
+
+    static async deselectGroup(db: Pool, wcaUserId: string, activityId: number): Promise<{ success: boolean }> {
+        await GroupSelectionModel.deleteByWcaUserIdAndActivity(db, wcaUserId, activityId);
+        return { success: true };
     }
 
     static async getActivityGroups(db: Pool, activityId: number): Promise<ActivityGroupsResponse> {

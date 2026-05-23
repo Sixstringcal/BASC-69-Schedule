@@ -75,6 +75,24 @@ class GroupSelectionModel {
         return rows;
     }
 
+    static async deleteByWcaUserIdAndActivity(db: Pool, wcaUserId: string, activityId: number): Promise<number> {
+        const [result]: any = await db.execute(
+            'DELETE FROM group_selections WHERE wca_user_id = ? AND activity_id = ?',
+            [wcaUserId, activityId]
+        );
+        return result.affectedRows;
+    }
+
+    static async deleteSiblingSelections(db: Pool, wcaUserId: string, siblingActivityIds: number[]): Promise<number> {
+        if (siblingActivityIds.length === 0) return 0;
+        const placeholders = siblingActivityIds.map(() => '?').join(', ');
+        const [result]: any = await db.execute(
+            `DELETE FROM group_selections WHERE wca_user_id = ? AND activity_id IN (${placeholders})`,
+            [wcaUserId, ...siblingActivityIds]
+        );
+        return result.affectedRows;
+    }
+
     static async deleteAll(db: Pool): Promise<number> {
         const [result]: any = await db.execute('DELETE FROM group_selections');
         return result.affectedRows;

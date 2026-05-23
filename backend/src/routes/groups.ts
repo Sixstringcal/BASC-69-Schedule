@@ -46,6 +46,25 @@ router.post('/select', isAuthenticated, async (req: Request, res: Response) => {
     }
 });
 
+router.delete('/select', isAuthenticated, async (req: Request, res: Response) => {
+    try {
+        const db = req.app.locals.db;
+        const wcaUserId = req.session.wcaUserId!;
+        const { activityId } = req.body;
+
+        if (!activityId) {
+            return res.status(400).json({ error: 'Missing activityId' });
+        }
+
+        const result = await GroupService.deselectGroup(db, wcaUserId, activityId);
+        res.json(result);
+
+    } catch (error: any) {
+        console.error('Deselect group error:', error);
+        res.status(500).json({ error: 'Failed to deselect group' });
+    }
+});
+
 router.get('/:activityId', async (req: Request, res: Response) => {
     try {
         const db = req.app.locals.db;
