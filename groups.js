@@ -424,9 +424,14 @@ async function clearSelections() {
     try {
         showNotification('Clearing selections...', 'info');
         
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = {};
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
         const response = await fetch(`${API_BASE_URL}/api/admin/clear-selections`, {
             method: 'DELETE',
-            credentials: 'include'
+            credentials: 'include',
+            headers
         });
         
         const data = await response.json();
