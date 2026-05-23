@@ -211,12 +211,12 @@ function renderGroupSelection(data) {
                         ${formatTime(group.startTime)} - ${formatTime(group.endTime)}
                     </div>
                     ${isAssigned ? '<div class="assigned-badge">📋 Already Assigned</div>' : ''}
-                    <button class="select-group-btn" 
-                            ${!canSelect || isSelected || isAssigned ? 'disabled' : ''}
+                    <button class="select-group-btn"
+                            ${!canSelect || isSelected ? 'disabled' : ''}
                             onclick="selectGroup(${group.activityId}, ${group.groupNumber})"
                             data-activity-id="${group.activityId}"
                             data-group-number="${group.groupNumber}">
-                        ${isAssigned ? '✓ Assigned' : (isSelected ? '✓ Selected' : (isFull ? 'Full' : 'Select'))}
+                        ${isSelected ? '✓ Selected' : (isFull ? 'Full' : 'Select')}
                     </button>
                 </div>
             `;
