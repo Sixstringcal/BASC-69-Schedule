@@ -255,6 +255,8 @@ class AdminService {
 
         if (updatedPersons.length === 0) {
             console.log('[writeToWCIF] All persons\' assignments are already up-to-date in WCA — no PATCH needed.');
+            const deleted = await GroupSelectionModel.deleteAll(db);
+            console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) (already up-to-date).`);
             return {
                 success: true,
                 message: 'All assignments are already up-to-date in WCA (no changes to write)',
