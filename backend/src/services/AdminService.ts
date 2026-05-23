@@ -126,6 +126,23 @@ class AdminService {
             throw new Error(`ActivityIds [${[...new Set(invalidActivityIds)].join(', ')}] do not exist in the WCIF schedule. The schedule may not have group sub-activities set up yet.`);
         }
 
+        // Build a map from child activityId → set of all sibling activityIds
+        // (all children sharing the same parent round), used to remove stale
+        // competitor assignments when a person is moved to a different group.
+        const siblingGroups = new Map<number, Set<number>>();
+        for (const venue of (wcif.schedule?.venues || [])) {
+            for (const room of venue.rooms) {
+                for (const activity of room.activities) {
+                    if (activity.childActivities && activity.childActivities.length > 0) {
+                        const siblingIds = new Set<number>(activity.childActivities.map((c: any) => c.id as number));
+                        for (const child of activity.childActivities) {
+                            siblingGroups.set(child.id, siblingIds);
+                        }
+                    }
+                }
+            }
+        }
+
         // Only send registered competitors (registrantId must be non-null).
         // Delegates/organizers with no registration (registrantId: null) cannot
         // have competitor assignments and including them causes a WCA 500.
@@ -144,9 +161,29 @@ class AdminService {
 
                 const finalAssignments: any[] = [];
 
-                // 1. Keep all existing assignments for activityIds NOT in our selection.
+                // Collect sibling activityIds to evict: any group that shares a
+                // parent round with one of our new assignments but isn't itself
+                // being written. Only competitor assignments are removed so that
+                // staff/judge assignments in other groups are left intact.
+                const activityIdsToEvict = new Set<number>();
+                for (const activityId of personAssignmentMap.keys()) {
+                    const siblings = siblingGroups.get(activityId);
+                    if (siblings) {
+                        for (const sibId of siblings) {
+                            if (!personAssignmentMap.has(sibId)) {
+                                activityIdsToEvict.add(sibId);
+                            }
+                        }
+                    }
+                }
+
+                // 1. Keep all existing assignments for activityIds NOT in our selection,
+                //    except stale competitor assignments for sibling groups being replaced.
                 for (const existing of baseAssignments) {
-                    if (!personAssignmentMap.has(existing.activityId)) {
+                    const isStaleGroupAssignment =
+                        activityIdsToEvict.has(existing.activityId) &&
+                        existing.assignmentCode === 'competitor';
+                    if (!personAssignmentMap.has(existing.activityId) && !isStaleGroupAssignment) {
                         finalAssignments.push(existing);
                     }
                 }
