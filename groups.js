@@ -408,7 +408,7 @@ async function writeToWCIF() {
         showNotification(`Successfully wrote ${data.groupsWritten} group assignments to WCIF!`, 'success');
         
         // Reload pending groups
-        await loadPendingGroups();
+        await loadAdminPanel();
     } catch (error) {
         console.error('Write WCIF error:', error);
         showNotification(error.message, 'error');
@@ -441,7 +441,7 @@ async function clearSelections() {
         }
         
         showNotification(`Cleared ${data.deleted} group selection(s).`, 'success');
-        await loadPendingGroups();
+        await loadAdminPanel();
     } catch (error) {
         console.error('Clear selections error:', error);
         showNotification(error.message, 'error');
