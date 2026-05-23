@@ -289,9 +289,12 @@ class AdminService {
                 ['success', writeId]
             );
 
+            const deleted = await GroupSelectionModel.deleteAll(db);
+            console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) after successful write.`);
+
             invalidateWCIFCache();
 
-            return { 
+            return {
                 success: true,
                 message: 'Groups successfully written to WCIF',
                 groupsWritten: selections.length

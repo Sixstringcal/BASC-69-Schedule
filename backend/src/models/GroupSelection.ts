@@ -74,6 +74,11 @@ class GroupSelectionModel {
         );
         return rows;
     }
+
+    static async deleteAll(db: Pool): Promise<number> {
+        const [result]: any = await db.execute('DELETE FROM group_selections');
+        return result.affectedRows;
+    }
 }
 
 export default GroupSelectionModel;
