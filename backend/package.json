@@ -7,7 +7,8 @@
     "build": "tsc",
     "start": "node dist/server.js",
     "dev": "ts-node-dev --respawn --transpile-only src/server.ts",
-    "watch": "tsc --watch"
+    "watch": "tsc --watch",
+    "publish": "git subtree push --prefix backend heroku main"
   },
   "keywords": ["wca", "cubing", "schedule", "groups"],
   "author": "",
