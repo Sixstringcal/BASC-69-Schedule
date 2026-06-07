@@ -176,17 +176,16 @@ function renderGroupSelection(data, unofficialData) {
         html += `
             <div class="unofficial-events-section">
                 <h3>Unofficial Events</h3>
-                <p>Sign up to compete in unofficial events at this competition.</p>
-                <div class="unofficial-events-list">
+                <p>Click an event to sign up, or click again to remove your registration.</p>
+                <div class="unofficial-events-grid">
         `;
         for (const event of unofficialEvents) {
+            const fn = event.registered ? `unofficialUnregister('${event.id}')` : `unofficialRegister('${event.id}')`;
             html += `
-                <div class="unofficial-event-item ${event.registered ? 'registered' : ''}">
-                    <span class="unofficial-event-name">${event.name}</span>
-                    <button class="unofficial-register-btn ${event.registered ? 'unregister' : ''}"
-                            onclick="${event.registered ? `unofficialUnregister('${event.id}')` : `unofficialRegister('${event.id}')`}">
-                        ${event.registered ? '✓ Registered (click to remove)' : 'Sign Up'}
-                    </button>
+                <div class="unofficial-event-card ${event.registered ? 'registered' : ''}" onclick="${fn}">
+                    ${event.registered ? '<div class="unofficial-check">✓</div>' : ''}
+                    <div class="unofficial-event-name">${event.name}</div>
+                    <div class="unofficial-event-status">${event.registered ? 'Registered' : 'Click to sign up'}</div>
                 </div>
             `;
         }
