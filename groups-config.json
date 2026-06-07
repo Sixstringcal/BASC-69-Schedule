@@ -1,6 +1,13 @@
 {
   "unofficialEvents": [
-    { "id": "999", "name": "9x9x9 Cube" }
+    { "id": "222", "name": "2x2x2 Cube" },
+    { "id": "999", "name": "9x9x9 Cube" },
+    { "id": "fto", "name": "Face Turning Octahedron" },
+    { "id": "333_doubles", "name": "3x3x3 Doubles" },
+    { "id": "333_team_blind", "name": "3x3x3 Team-Blind With Inspection" },
+    { "id": "625_contest", "name": "6.25 Contest" },
+    { "id": "linear_fmc", "name": "Linear FMC" },
+    { "id": "fmc_duel", "name": "FMC Duel" }
   ],
   "groupSettings": {
     "333-r1": {
