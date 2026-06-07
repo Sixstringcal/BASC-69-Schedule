@@ -48,7 +48,7 @@ export async function getGroupsConfig(): Promise<GroupsConfig> {
     }
     
     try {
-        const configPath = path.join(__dirname, '../../../groups-config.json');
+        const configPath = path.join(__dirname, '../../groups-config.json');
         const data = await fs.readFile(configPath, 'utf8');
         groupsConfigCache = JSON.parse(data);
         return groupsConfigCache as GroupsConfig;

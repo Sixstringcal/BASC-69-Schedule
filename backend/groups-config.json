@@ -1,0 +1,33 @@
+{
+  "unofficialEvents": [
+    { "id": "222", "name": "2x2x2 Cube" },
+    { "id": "999", "name": "9x9x9 Cube" },
+    { "id": "fto", "name": "Face Turning Octahedron" },
+    { "id": "333_doubles", "name": "3x3x3 Doubles" },
+    { "id": "333_team_blind", "name": "3x3x3 Team-Blind With Inspection" },
+    { "id": "625_contest", "name": "6.25 Contest" },
+    { "id": "linear_fmc", "name": "Linear FMC" },
+    { "id": "fmc_duel", "name": "FMC Duel" }
+  ],
+  "groupSettings": {
+    "333-r1": {
+      "maxPerGroup": 24
+    },
+    "222-r1": {
+      "maxPerGroup": 24
+    },
+    "444-r1": {
+      "maxPerGroup": 24
+    },
+    "333oh-r1": {
+      "maxPerGroup": 24
+    },
+    "999-r1": {
+      "maxPerGroup": 24
+    }
+  },
+  "fieldDefinitions": {
+    "maxPerGroup": "Maximum number of competitors per group (optional, defaults to no limit)"
+  },
+  "instructions": "OPTIONAL: Add entries to override maxPerGroup for specific events/rounds. All rounds with child groups in the WCIF schedule are automatically available for group selection. Use the WCA activity code format: {eventId}-r{roundNumber} (e.g. '666-r1', 'minx-r1')."
+}
