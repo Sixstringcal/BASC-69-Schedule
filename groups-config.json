@@ -1,4 +1,7 @@
 {
+  "unofficialEvents": [
+    { "id": "999", "name": "9x9x9 Cube" }
+  ],
   "groupSettings": {
     "333-r1": {
       "maxPerGroup": 24

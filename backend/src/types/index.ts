@@ -95,7 +95,13 @@ export interface GroupConfig {
   maxPerGroup: number;
 }
 
+export interface UnofficialEvent {
+  id: string;
+  name: string;
+}
+
 export interface GroupsConfig {
+  unofficialEvents?: UnofficialEvent[];
   groupSettings: {
     [activityName: string]: GroupConfig;
   };

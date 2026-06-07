@@ -7,12 +7,25 @@ import mysql from 'mysql2/promise';
 import authRoutes from './routes/auth';
 import groupRoutes from './routes/groups';
 import adminRoutes from './routes/admin';
+import unofficialRoutes from './routes/unofficial';
 
 dotenv.config();
 
 const app = express();
 
 const pool = mysql.createPool(process.env.DATABASE_URL || '');
+
+pool.query(`
+    CREATE TABLE IF NOT EXISTS unofficial_registrations (
+        id INT AUTO_INCREMENT PRIMARY KEY,
+        wca_user_id VARCHAR(255) NOT NULL,
+        registrant_id INT,
+        event_id VARCHAR(50) NOT NULL,
+        event_name VARCHAR(255) NOT NULL,
+        registered_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+        UNIQUE KEY unique_user_event (wca_user_id, event_id)
+    )
+`).catch(err => console.error('Failed to create unofficial_registrations table:', err));
 
 app.locals.db = pool;
 
@@ -62,6 +75,7 @@ app.use(passport.session());
 app.use('/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
 app.use('/api/admin', adminRoutes);
+app.use('/api/unofficial', unofficialRoutes);
 
 app.get('/health', (_req: Request, res: Response) => {
     res.json({ status: 'ok', timestamp: new Date().toISOString() });

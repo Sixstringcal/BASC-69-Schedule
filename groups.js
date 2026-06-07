@@ -119,7 +119,7 @@ function setupUserSection() {
 // Load group selection UI
 async function loadGroupSelection() {
     const content = document.getElementById('groupsContent');
-    
+
     if (!currentUser) {
         content.innerHTML = `
             <div class="message-box">
@@ -130,27 +130,29 @@ async function loadGroupSelection() {
         `;
         return;
     }
-    
+
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading available groups...</p></div>';
-    
+
     try {
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const response = await fetch(`${API_BASE_URL}/api/groups`, {
-            credentials: 'include',
-            headers
-        });
-        
-        if (!response.ok) {
-            const error = await response.json();
+
+        const [groupsRes, unofficialRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/groups`, { credentials: 'include', headers }),
+            fetch(`${API_BASE_URL}/api/unofficial`, { credentials: 'include', headers })
+        ]);
+
+        if (!groupsRes.ok) {
+            const error = await groupsRes.json();
             throw new Error(error.error || 'Failed to load groups');
         }
-        
-        const data = await response.json();
-        renderGroupSelection(data);
-        
+
+        const groupData = await groupsRes.json();
+        const unofficialData = unofficialRes.ok ? await unofficialRes.json() : { events: [] };
+
+        renderGroupSelection(groupData, unofficialData);
+
     } catch (error) {
         console.error('Load groups error:', error);
         content.innerHTML = `
@@ -163,20 +165,49 @@ async function loadGroupSelection() {
 }
 
 // Render group selection UI
-function renderGroupSelection(data) {
+function renderGroupSelection(data, unofficialData) {
     const content = document.getElementById('groupsContent');
-    
-    if (!data.availableGroups || data.availableGroups.length === 0) {
-        content.innerHTML = `
-            <div class="message-box">
-                <h3>No Groups Available</h3>
-                <p>Either you're not registered for any events with group selection, or groups haven't been configured yet.</p>
-            </div>
+    const unofficialEvents = (unofficialData && unofficialData.events) || [];
+
+    let html = '';
+
+    // Unofficial events section
+    if (unofficialEvents.length > 0) {
+        html += `
+            <div class="unofficial-events-section">
+                <h3>Unofficial Events</h3>
+                <p>Sign up to compete in unofficial events at this competition.</p>
+                <div class="unofficial-events-list">
         `;
+        for (const event of unofficialEvents) {
+            html += `
+                <div class="unofficial-event-item ${event.registered ? 'registered' : ''}">
+                    <span class="unofficial-event-name">${event.name}</span>
+                    <button class="unofficial-register-btn ${event.registered ? 'unregister' : ''}"
+                            onclick="${event.registered ? `unofficialUnregister('${event.id}')` : `unofficialRegister('${event.id}')`}">
+                        ${event.registered ? '✓ Registered (click to remove)' : 'Sign Up'}
+                    </button>
+                </div>
+            `;
+        }
+        html += '</div></div>';
+    }
+
+    if (!data.availableGroups || data.availableGroups.length === 0) {
+        if (unofficialEvents.length === 0) {
+            content.innerHTML = `
+                <div class="message-box">
+                    <h3>No Groups Available</h3>
+                    <p>Either you're not registered for any events with group selection, or groups haven't been configured yet.</p>
+                </div>
+            `;
+            return;
+        }
+        content.innerHTML = html;
         return;
     }
-    
-    let html = `
+
+    html += `
         <div class="competitor-info">
             <h3>Welcome, ${data.person.name}!</h3>
             <p>Select your competing groups for the events you're registered for.</p>
@@ -264,6 +295,54 @@ async function selectGroup(activityId, groupNumber) {
     }
 }
 
+// Register for an unofficial event
+async function unofficialRegister(eventId) {
+    try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE_URL}/api/unofficial/register`, {
+            method: 'POST',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({ eventId })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to register');
+
+        showNotification('Registered for unofficial event!', 'success');
+        await loadGroupSelection();
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+
+// Unregister from an unofficial event
+async function unofficialUnregister(eventId) {
+    try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+
+        const response = await fetch(`${API_BASE_URL}/api/unofficial/register`, {
+            method: 'DELETE',
+            headers,
+            credentials: 'include',
+            body: JSON.stringify({ eventId })
+        });
+
+        const data = await response.json();
+        if (!response.ok) throw new Error(data.error || 'Failed to unregister');
+
+        showNotification('Removed registration.', 'success');
+        await loadGroupSelection();
+    } catch (error) {
+        showNotification(error.message, 'error');
+    }
+}
+
 // Deselect a group
 async function deselectGroup(activityId) {
     try {
@@ -340,17 +419,18 @@ async function loadAdminPanel() {
 // Render admin panel
 function renderAdminPanel(data) {
     const content = document.getElementById('adminContent');
-    
+    const unofficialRegs = data.unofficialRegistrations || [];
+
     let html = `
         <div class="admin-header">
             <h3>Pending Group Selections</h3>
             <p>Total selections: ${data.totalSelections}</p>
-            <button class="write-wcif-btn" onclick="writeToWCIF()">Write Groups to WCIF</button>
+            <button class="write-wcif-btn" onclick="writeToWCIF()">Write to WCIF</button>
             <button class="clear-selections-btn" onclick="clearSelections()">Clear All Selections</button>
         </div>
         <div class="admin-groups-list">
     `;
-    
+
     if (data.activities.length === 0) {
         html += '<p>No group selections yet.</p>';
     } else {
@@ -360,7 +440,7 @@ function renderAdminPanel(data) {
                     <h4>${activity.activityName}</h4>
                     <div class="admin-groups">
             `;
-            
+
             for (const group of activity.groups) {
                 html += `
                     <div class="admin-group">
@@ -371,28 +451,40 @@ function renderAdminPanel(data) {
                         <div class="admin-competitors">
                             <ul>
                 `;
-                
+
                 for (const competitor of group.competitors) {
-                    html += `
-                        <li>${competitor.name} ${competitor.wcaId ? `(${competitor.wcaId})` : ''}</li>
-                    `;
+                    html += `<li>${competitor.name} ${competitor.wcaId ? `(${competitor.wcaId})` : ''}</li>`;
                 }
-                
-                html += `
-                            </ul>
-                        </div>
-                    </div>
-                `;
+
+                html += `</ul></div></div>`;
             }
-            
-            html += `
-                    </div>
-                </div>
-            `;
+
+            html += `</div></div>`;
         }
     }
-    
+
     html += '</div>';
+
+    // Unofficial registrations section
+    if (unofficialRegs.length > 0) {
+        html += `
+            <div class="admin-unofficial-section">
+                <h3>Unofficial Event Sign-ups</h3>
+        `;
+        for (const event of unofficialRegs) {
+            html += `
+                <div class="admin-activity">
+                    <h4>${event.eventName} <span class="group-count">${event.count} competitor${event.count !== 1 ? 's' : ''}</span></h4>
+                    <ul>
+            `;
+            for (const c of event.competitors) {
+                html += `<li>${c.name} ${c.wcaId ? `(${c.wcaId})` : ''}</li>`;
+            }
+            html += '</ul></div>';
+        }
+        html += '</div>';
+    }
+
     content.innerHTML = html;
 }
 
