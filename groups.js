@@ -582,15 +582,22 @@ function exportUnofficialScorecards(eventId) {
 
     const regs = lastAdminData.unofficialRegistrations || [];
     const events = eventId ? regs.filter(e => e.eventId === eventId) : regs;
+    const competitionName = lastAdminData.competitionName || '';
 
     const rows = [];
     for (const event of events) {
         for (const c of event.competitors) {
             rows.push({
+                competition_name: competitionName,
+                registrant_id: c.registrantId != null ? c.registrantId : '',
                 wca_id: c.wcaId || '',
                 name: c.name,
                 event_id: event.eventId,
-                event_name: event.eventName
+                event_name: event.eventName,
+                format: event.format != null ? event.format : '',
+                time_limit: event.timeLimit != null ? event.timeLimit : '',
+                cutoff_attempts: event.cutoff != null ? event.cutoff.numberOfAttempts : '',
+                cutoff_time: event.cutoff != null ? event.cutoff.attemptResult : ''
             });
         }
     }
@@ -600,7 +607,7 @@ function exportUnofficialScorecards(eventId) {
         return;
     }
 
-    const headers = ['wca_id', 'name', 'event_id', 'event_name'];
+    const headers = ['competition_name', 'registrant_id', 'wca_id', 'name', 'event_id', 'event_name', 'format', 'time_limit', 'cutoff_attempts', 'cutoff_time'];
     const escape = val => '"' + String(val).replace(/"/g, '""') + '"';
     const lines = [headers.map(escape).join(',')];
     for (const row of rows) {

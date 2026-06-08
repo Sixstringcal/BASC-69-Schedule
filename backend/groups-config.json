@@ -1,13 +1,13 @@
 {
   "unofficialEvents": [
-    { "id": "222", "name": "2x2x2 Cube" },
-    { "id": "999", "name": "9x9x9 Cube" },
-    { "id": "fto", "name": "Face Turning Octahedron" },
-    { "id": "333_doubles", "name": "3x3x3 Doubles" },
-    { "id": "333_team_blind", "name": "3x3x3 Team-Blind With Inspection" },
-    { "id": "625_contest", "name": "6.25 Contest" },
-    { "id": "linear_fmc", "name": "Linear FMC" },
-    { "id": "fmc_duel", "name": "FMC Duel" }
+    { "id": "222", "name": "2x2x2 Cube", "format": "1", "timeLimit": 6000, "cutoff": null },
+    { "id": "999", "name": "9x9x9 Cube", "format": "1", "timeLimit": 180000, "cutoff": null },
+    { "id": "fto", "name": "Face Turning Octahedron", "format": "a", "timeLimit": 13800, "cutoff": { "numberOfAttempts": 2, "attemptResult": 6000 } },
+    { "id": "333_doubles", "name": "3x3x3 Doubles", "format": "a", "timeLimit": 13800, "cutoff": { "numberOfAttempts": 2, "attemptResult": 6000 } },
+    { "id": "333_team_blind", "name": "3x3x3 Team-Blind With Inspection", "format": "a", "timeLimit": 13800, "cutoff": { "numberOfAttempts": 2, "attemptResult": 6000 } },
+    { "id": "625_contest", "name": "6.25 Contest", "format": "5", "timeLimit": null, "cutoff": null },
+    { "id": "linear_fmc", "name": "Linear FMC", "format": "m", "timeLimit": 12000, "cutoff": null },
+    { "id": "fmc_duel", "name": "FMC Duel", "format": null, "timeLimit": 12000, "cutoff": null }
   ],
   "groupSettings": {
     "333-r1": {

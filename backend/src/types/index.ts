@@ -95,9 +95,17 @@ export interface GroupConfig {
   maxPerGroup: number;
 }
 
+export interface UnofficialEventCutoff {
+  numberOfAttempts: number;
+  attemptResult: number; // centiseconds
+}
+
 export interface UnofficialEvent {
   id: string;
   name: string;
+  format?: string | null;       // WCIF format code: a5, m3, b1, b2, b3
+  timeLimit?: number | null;    // centiseconds
+  cutoff?: UnofficialEventCutoff | null;
 }
 
 export interface GroupsConfig {

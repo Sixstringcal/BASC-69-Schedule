@@ -2,10 +2,16 @@ import axios from 'axios';
 import { Pool } from 'mysql2/promise';
 import GroupSelectionModel from '../models/GroupSelection';
 import UnofficialRegistrationModel from '../models/UnofficialRegistration';
-import { getWCIF, invalidateWCIFCache, WCA_ORIGIN, COMPETITION_ID } from '../utils/wcif';
+import { getWCIF, getGroupsConfig, invalidateWCIFCache, WCA_ORIGIN, COMPETITION_ID } from '../utils/wcif';
+
+interface UnofficialEventCutoff {
+    numberOfAttempts: number;
+    attemptResult: number;
+}
 
 interface PendingGroupsResponse {
     totalSelections: number;
+    competitionName: string;
     activities: Array<{
         activityId: number;
         activityName: string;
@@ -23,8 +29,11 @@ interface PendingGroupsResponse {
     unofficialRegistrations: Array<{
         eventId: string;
         eventName: string;
+        format: string | null;
+        timeLimit: number | null;
+        cutoff: UnofficialEventCutoff | null;
         count: number;
-        competitors: Array<{ name: string; wcaId: string }>;
+        competitors: Array<{ name: string; wcaId: string; registrantId: number | null }>;
     }>;
 }
 
@@ -42,7 +51,11 @@ interface DelegateInfo {
 
 class AdminService {
     static async getPendingGroups(db: Pool, _accessToken?: string): Promise<PendingGroupsResponse> {
-        const selections = await GroupSelectionModel.getAllWithCompetitors(db);
+        const [selections, wcif, config] = await Promise.all([
+            GroupSelectionModel.getAllWithCompetitors(db),
+            getWCIF(),
+            getGroupsConfig()
+        ]);
         
         const groupedByActivity: Record<number, any> = {};
         
@@ -77,12 +90,25 @@ class AdminService {
         }));
 
         const unofficialRows = await UnofficialRegistrationModel.getAllWithCompetitors(db);
+        const configEventMap = new Map((config.unofficialEvents || []).map(e => [e.id, e]));
         const unofficialByEvent: Record<string, any> = {};
         for (const row of unofficialRows) {
             if (!unofficialByEvent[row.eventId]) {
-                unofficialByEvent[row.eventId] = { eventId: row.eventId, eventName: row.eventName, competitors: [] };
+                const eventConfig = configEventMap.get(row.eventId);
+                unofficialByEvent[row.eventId] = {
+                    eventId: row.eventId,
+                    eventName: row.eventName,
+                    format: eventConfig?.format ?? null,
+                    timeLimit: eventConfig?.timeLimit ?? null,
+                    cutoff: eventConfig?.cutoff ?? null,
+                    competitors: []
+                };
             }
-            unofficialByEvent[row.eventId].competitors.push({ name: row.competitorName, wcaId: row.wcaId });
+            unofficialByEvent[row.eventId].competitors.push({
+                name: row.competitorName,
+                wcaId: row.wcaId,
+                registrantId: row.registrantId
+            });
         }
         const unofficialRegistrations = Object.values(unofficialByEvent).map((e: any) => ({
             ...e,
@@ -91,6 +117,7 @@ class AdminService {
 
         return {
             totalSelections: selections.length,
+            competitionName: wcif.name,
             activities: result,
             unofficialRegistrations
         };
