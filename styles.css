@@ -1070,6 +1070,59 @@ section h2 {
     font-size: 0.9em;
 }
 
+/* Admin unofficial section */
+.admin-unofficial-section {
+    margin-top: 30px;
+}
+
+.admin-unofficial-header {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    margin-bottom: 15px;
+}
+
+.admin-unofficial-header h3 {
+    margin: 0;
+}
+
+.admin-activity-header {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--border-color);
+}
+
+.admin-activity-header h4 {
+    color: var(--primary-color);
+    margin: 0;
+    flex: 1;
+}
+
+.export-csv-btn {
+    background: #27ae60;
+    color: white;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9em;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+    white-space: nowrap;
+}
+
+.export-csv-btn:hover {
+    background: #219a52;
+}
+
+.export-csv-btn--small {
+    padding: 4px 10px;
+    font-size: 0.8em;
+}
+
 /* Notification Styles */
 .notification {
     position: fixed;

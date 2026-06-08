@@ -4,6 +4,7 @@ const API_BASE_URL = 'https://basc69-schedule-backend-d86998e8386e.herokuapp.com
 // Global state
 let currentUser = null;
 let isDelegate = false;
+let lastAdminData = null;
 
 // Initialize group selection functionality
 async function initGroupSelection() {
@@ -402,8 +403,9 @@ async function loadAdminPanel() {
         }
         
         const data = await response.json();
+        lastAdminData = data;
         renderAdminPanel(data);
-        
+
     } catch (error) {
         console.error('Load admin panel error:', error);
         content.innerHTML = `
@@ -468,12 +470,18 @@ function renderAdminPanel(data) {
     if (unofficialRegs.length > 0) {
         html += `
             <div class="admin-unofficial-section">
-                <h3>Unofficial Event Sign-ups</h3>
+                <div class="admin-unofficial-header">
+                    <h3>Unofficial Event Sign-ups</h3>
+                    <button class="export-csv-btn" onclick="exportUnofficialScorecards()">Export Scorecards CSV</button>
+                </div>
         `;
         for (const event of unofficialRegs) {
             html += `
                 <div class="admin-activity">
-                    <h4>${event.eventName} <span class="group-count">${event.count} competitor${event.count !== 1 ? 's' : ''}</span></h4>
+                    <div class="admin-activity-header">
+                        <h4>${event.eventName} <span class="group-count">${event.count} competitor${event.count !== 1 ? 's' : ''}</span></h4>
+                        <button class="export-csv-btn export-csv-btn--small" onclick="exportUnofficialScorecards('${event.eventId}')">Export CSV</button>
+                    </div>
                     <ul>
             `;
             for (const c of event.competitors) {
@@ -566,6 +574,48 @@ async function clearSelections() {
         console.error('Clear selections error:', error);
         showNotification(error.message, 'error');
     }
+}
+
+// Export unofficial event scorecards as CSV (pass eventId to filter to one event)
+function exportUnofficialScorecards(eventId) {
+    if (!lastAdminData) return;
+
+    const regs = lastAdminData.unofficialRegistrations || [];
+    const events = eventId ? regs.filter(e => e.eventId === eventId) : regs;
+
+    const rows = [];
+    for (const event of events) {
+        for (const c of event.competitors) {
+            rows.push({
+                wca_id: c.wcaId || '',
+                name: c.name,
+                event_id: event.eventId,
+                event_name: event.eventName
+            });
+        }
+    }
+
+    if (rows.length === 0) {
+        showNotification('No registrations to export.', 'info');
+        return;
+    }
+
+    const headers = ['wca_id', 'name', 'event_id', 'event_name'];
+    const escape = val => '"' + String(val).replace(/"/g, '""') + '"';
+    const lines = [headers.map(escape).join(',')];
+    for (const row of rows) {
+        lines.push(headers.map(h => escape(row[h])).join(','));
+    }
+
+    const csv = lines.join('\n');
+    const filename = eventId ? `scorecards_${eventId}.csv` : 'unofficial_scorecards.csv';
+    const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(url);
 }
 
 // Logout function
