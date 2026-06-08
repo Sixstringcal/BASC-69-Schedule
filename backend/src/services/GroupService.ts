@@ -1,6 +1,7 @@
 import { Pool } from 'mysql2/promise';
 import GroupSelectionModel from '../models/GroupSelection';
-import { getWCIF, getGroupsConfig, parseActivityCode, findActivityById, getPersonByWcaUserId } from '../utils/wcif';
+import { getWCIF, getGroupsConfig, parseActivityCode, findActivityById, getPersonByWcaUserId, refreshAccessToken } from '../utils/wcif';
+import UserModel from '../models/User';
 import { AvailableGroup, GroupInfo } from '../types';
 
 interface GroupServiceResponse {
@@ -35,9 +36,24 @@ interface ActivityGroupsResponse {
     }>;
 }
 
+async function getWCIFForUser(db: Pool, wcaUserId: string) {
+    const user = await UserModel.findByWcaUserId(db, wcaUserId);
+    if (!user?.accessToken) return getWCIF();
+    try {
+        return await getWCIF(user.accessToken);
+    } catch {
+        try {
+            const newToken = await refreshAccessToken(db, wcaUserId);
+            return await getWCIF(newToken);
+        } catch {
+            return getWCIF();
+        }
+    }
+}
+
 class GroupService {
     static async getAvailableGroups(db: Pool, wcaUserId: string): Promise<GroupServiceResponse> {
-        const wcif = await getWCIF();
+        const wcif = await getWCIFForUser(db, wcaUserId);
         const person = await getPersonByWcaUserId(wcif, wcaUserId, db);
         
         if (!person || !person.registration) {
@@ -135,7 +151,7 @@ class GroupService {
     }
 
     static async selectGroup(db: Pool, wcaUserId: string, activityId: number, groupNumber: number): Promise<SelectGroupResponse> {
-        const wcif = await getWCIF();
+        const wcif = await getWCIFForUser(db, wcaUserId);
         const person = await getPersonByWcaUserId(wcif, wcaUserId, db);
 
         if (!person) {
