@@ -125,10 +125,9 @@ class AdminService {
 
     static async writeToWCIF(db: Pool, delegateInfo: DelegateInfo): Promise<WriteToWCIFResponse> {
         const selections = await GroupSelectionModel.getAll(db);
-        const unofficialRegs = await UnofficialRegistrationModel.getAll(db);
 
-        if (selections.length === 0 && unofficialRegs.length === 0) {
-            throw new Error('No group selections or unofficial registrations to write');
+        if (selections.length === 0) {
+            throw new Error('No group selections to write');
         }
 
         const wcif = await getWCIF(delegateInfo.accessToken);
@@ -192,15 +191,6 @@ class AdminService {
             }
         }
 
-        // Build map of registrantId → event IDs to add from unofficial registrations
-        const unofficialByRegistrantId: Record<string, string[]> = {};
-        for (const reg of unofficialRegs) {
-            if (reg.registrantId === null) continue;
-            const key = String(reg.registrantId);
-            if (!unofficialByRegistrantId[key]) unofficialByRegistrantId[key] = [];
-            unofficialByRegistrantId[key].push(reg.eventId);
-        }
-
         // Only send registered competitors (registrantId must be non-null).
         // Delegates/organizers with no registration (registrantId: null) cannot
         // have competitor assignments and including them causes a WCA 500.
@@ -208,7 +198,7 @@ class AdminService {
         const updatedPersons = wcif.persons
             .filter(person =>
                 person.registrantId !== null &&
-                (assignmentsToAdd[String(person.registrantId)] || unofficialByRegistrantId[String(person.registrantId)])
+                assignmentsToAdd[String(person.registrantId)]
             )
             .map(person => {
                 const personAssignmentMap = assignmentsToAdd[String(person.registrantId!)];
@@ -282,16 +272,7 @@ class AdminService {
                     }
                 }
 
-                // Build registration patch if this person has unofficial event sign-ups
-                const newUnofficialIds = unofficialByRegistrantId[String(person.registrantId)] || [];
-                let registrationPatch: object | undefined;
-                if (newUnofficialIds.length > 0 && person.registration) {
-                    const existingIds: string[] = person.registration.eventIds || [];
-                    const mergedIds = Array.from(new Set([...existingIds, ...newUnofficialIds]));
-                    registrationPatch = { ...person.registration, eventIds: mergedIds };
-                }
-
-                // Skip persons whose assignments and registration are completely unchanged.
+                // Skip persons whose assignments are completely unchanged.
                 const assignmentsChanged =
                     finalAssignments.length !== baseAssignments.length ||
                     finalAssignments.some(fa =>
@@ -302,7 +283,7 @@ class AdminService {
                         )
                     );
 
-                if (!assignmentsChanged && !registrationPatch) {
+                if (!assignmentsChanged) {
                     console.log(`[writeToWCIF] Person ${person.wcaUserId} (registrantId ${person.registrantId}): all assignments unchanged, skipping from payload.`);
                     return null;
                 }
@@ -310,8 +291,7 @@ class AdminService {
                 return {
                     wcaUserId: Number(person.wcaUserId),
                     registrantId: person.registrantId,
-                    assignments: finalAssignments,
-                    ...(registrationPatch ? { registration: registrationPatch } : {})
+                    assignments: finalAssignments
                 };
             })
             .filter(p => p !== null);
@@ -326,7 +306,6 @@ class AdminService {
         if (updatedPersons.length === 0) {
             console.log('[writeToWCIF] All persons\' assignments are already up-to-date in WCA — no PATCH needed.');
             const deleted = await GroupSelectionModel.deleteAll(db);
-            await UnofficialRegistrationModel.deleteAll(db);
             console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) (already up-to-date).`);
             return {
                 success: true,
@@ -363,15 +342,14 @@ class AdminService {
             );
 
             const deleted = await GroupSelectionModel.deleteAll(db);
-            await UnofficialRegistrationModel.deleteAll(db);
-            console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) and ${unofficialRegs.length} unofficial registration(s) after successful write.`);
+            console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) after successful write.`);
 
             invalidateWCIFCache();
 
             return {
                 success: true,
                 message: 'Groups successfully written to WCIF',
-                groupsWritten: selections.length + unofficialRegs.length
+                groupsWritten: selections.length
             };
 
         } catch (error: any) {
