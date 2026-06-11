@@ -177,7 +177,7 @@ function renderGroupSelection(data, unofficialData) {
         html += `
             <div class="unofficial-events-section">
                 <h3>Unofficial Events</h3>
-                <p>Click an event to sign up, or click again to remove your registration.</p>
+                <p>Click an event to sign up, or click again to remove your registration. For team events (Doubles, Team-Blind), only one person per team needs to register.</p>
                 <div class="unofficial-events-grid">
         `;
         for (const event of unofficialEvents) {
