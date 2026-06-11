@@ -36,6 +36,17 @@
   "disabledEvents": [
     "222"
   ],
+  "unofficialGroupSettings": {
+    "999": {
+      "id": 1000000,
+      "name": "9x9x9 Cube",
+      "maxPerGroup": 40,
+      "groups": [
+        { "id": 1000001, "groupNumber": 1, "startTime": "2026-08-29T22:30:00.000Z", "endTime": "2026-08-29T23:15:00.000Z" },
+        { "id": 1000002, "groupNumber": 2, "startTime": "2026-08-29T23:15:00.000Z", "endTime": "2026-08-30T00:00:00.000Z" }
+      ]
+    }
+  },
   "groupSettings": {
     "333-r1": {
       "maxPerGroup": 40
@@ -43,14 +54,17 @@
     "555-r1": {
       "maxPerGroup": 40
     },
+    "666-r1": {
+      "maxPerGroup": 40
+    },
+    "skewb-r1": {
+      "maxPerGroup": 40
+    },
     "333oh-r1": {
       "maxPerGroup": 50
     },
     "333bf-r1": {
       "maxPerGroup": 20
-    },
-    "999-r1": {
-      "maxPerGroup": 40
     }
   },
   "fieldDefinitions": {

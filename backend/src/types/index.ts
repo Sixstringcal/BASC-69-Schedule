@@ -108,9 +108,26 @@ export interface UnofficialEvent {
   cutoff?: UnofficialEventCutoff | null;
 }
 
+export interface UnofficialGroupDef {
+  id: number;
+  groupNumber: number;
+  startTime: string;
+  endTime: string;
+}
+
+export interface UnofficialGroupSettings {
+  id: number;
+  name: string;
+  maxPerGroup: number;
+  groups: UnofficialGroupDef[];
+}
+
 export interface GroupsConfig {
   unofficialEvents?: UnofficialEvent[];
   disabledEvents?: string[];
+  unofficialGroupSettings?: {
+    [eventId: string]: UnofficialGroupSettings;
+  };
   groupSettings: {
     [activityName: string]: GroupConfig;
   };
