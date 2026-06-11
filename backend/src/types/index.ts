@@ -110,6 +110,7 @@ export interface UnofficialEvent {
 
 export interface GroupsConfig {
   unofficialEvents?: UnofficialEvent[];
+  disabledEvents?: string[];
   groupSettings: {
     [activityName: string]: GroupConfig;
   };

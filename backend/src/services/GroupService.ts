@@ -1,5 +1,6 @@
 import { Pool } from 'mysql2/promise';
 import GroupSelectionModel from '../models/GroupSelection';
+import UnofficialRegistrationModel from '../models/UnofficialRegistration';
 import { getWCIF, getGroupsConfig, parseActivityCode, findActivityById, getPersonByWcaUserId, refreshAccessToken } from '../utils/wcif';
 import UserModel from '../models/User';
 import { AvailableGroup, GroupInfo } from '../types';
@@ -61,6 +62,8 @@ class GroupService {
         }
 
         const registeredEvents = person.registration.eventIds || [];
+        const unofficialRegs = await UnofficialRegistrationModel.findByWcaUserId(db, wcaUserId);
+        const allRegisteredEvents = [...registeredEvents, ...unofficialRegs.map(r => r.eventId)];
         const groupsConfig = await getGroupsConfig();
 
         // Build set of activity IDs where this person is assigned as a competitor
@@ -96,7 +99,10 @@ class GroupService {
                     }
 
                     const parsed = parseActivityCode(activity.activityCode);
-                    if (!parsed || !registeredEvents.includes(parsed.eventId)) {
+                    if (!parsed || !allRegisteredEvents.includes(parsed.eventId)) {
+                        continue;
+                    }
+                    if (groupsConfig.disabledEvents?.includes(parsed.eventId)) {
                         continue;
                     }
 
@@ -163,13 +169,29 @@ class GroupService {
             throw new Error('Activity not found');
         }
 
-        const groupsConfig = await getGroupsConfig();
         const parentActivity = activityInfo.parent || activityInfo.activity;
         const parsed = parseActivityCode(parentActivity.activityCode);
-        const configKey = parsed ? `${parsed.eventId}-r${parsed.roundNumber}` : null;
-        const config = configKey ? groupsConfig.groupSettings[configKey] : null;
 
+        if (!parsed) {
+            throw new Error('Not registered for this event');
+        }
+        const unofficialRegs = await UnofficialRegistrationModel.findByWcaUserId(db, wcaUserId);
+        const unofficialEventIds = unofficialRegs.map(r => r.eventId);
+        const inWcif = person.registration?.eventIds?.includes(parsed.eventId) ?? false;
+        const inUnofficial = unofficialEventIds.includes(parsed.eventId);
+        if (!inWcif && !inUnofficial) {
+            throw new Error('Not registered for this event');
+        }
+
+        const groupsConfig = await getGroupsConfig();
+
+        if (groupsConfig.disabledEvents?.includes(parsed.eventId)) {
+            throw new Error('Group selection is not available for this event');
+        }
+        const configKey = `${parsed.eventId}-r${parsed.roundNumber}`;
+        const config = groupsConfig.groupSettings[configKey];
         const maxCapacity = config?.maxPerGroup ?? 9999;
+
         const currentCount = await GroupSelectionModel.countByActivityAndGroup(db, activityId, groupNumber);
 
         if (currentCount >= maxCapacity) {
@@ -221,10 +243,12 @@ class GroupService {
             [activityId]
         );
 
-        const groupsConfig = await getGroupsConfig();
         const parentActivity = activityInfo.parent || activityInfo.activity;
-        const config = groupsConfig.groupSettings[parentActivity.name];
-        const maxCapacity = config ? (config.maxPerGroup || 24) : 24;
+        const parsed = parseActivityCode(parentActivity.activityCode);
+        const groupsConfig = await getGroupsConfig();
+        const configKey = parsed ? `${parsed.eventId}-r${parsed.roundNumber}` : null;
+        const config = configKey ? groupsConfig.groupSettings[configKey] : null;
+        const maxCapacity = config?.maxPerGroup ?? 24;
 
         return {
             activityId: activityInfo.activity.id,
