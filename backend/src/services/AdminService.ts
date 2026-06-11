@@ -124,7 +124,11 @@ class AdminService {
     }
 
     static async writeToWCIF(db: Pool, delegateInfo: DelegateInfo): Promise<WriteToWCIFResponse> {
-        const selections = await GroupSelectionModel.getAll(db);
+        // Synthetic activity IDs (>= 1000000) are for unofficial events and cannot
+        // be written to the WCA WCIF — skip them.
+        const SYNTHETIC_ID_THRESHOLD = 1000000;
+        const selections = (await GroupSelectionModel.getAll(db))
+            .filter(s => s.activityId < SYNTHETIC_ID_THRESHOLD);
 
         if (selections.length === 0) {
             throw new Error('No group selections to write');
