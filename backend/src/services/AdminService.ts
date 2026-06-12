@@ -126,13 +126,24 @@ class AdminService {
 
     static async writeToWCIF(db: Pool, delegateInfo: DelegateInfo): Promise<AcceptGroupsResponse> {
         // Synthetic activity IDs (>= 1000000) are for unofficial events and cannot
-        // be written to the WCA WCIF — skip them.
+        // be written to the WCA WCIF — they are accepted in our DB instead.
         const SYNTHETIC_ID_THRESHOLD = 1000000;
-        const selections = (await GroupSelectionModel.getAll(db))
-            .filter(s => s.activityId < SYNTHETIC_ID_THRESHOLD);
+        const allSelections = await GroupSelectionModel.getAll(db);
+        const selections = allSelections.filter(s => s.activityId < SYNTHETIC_ID_THRESHOLD);
 
-        if (selections.length === 0) {
+        if (allSelections.length === 0) {
             throw new Error('No group selections to write');
+        }
+
+        // If there are only unofficial selections (no WCIF writes needed), accept them and return early.
+        if (selections.length === 0) {
+            const accepted = await GroupSelectionModel.acceptAllAboveThreshold(db, SYNTHETIC_ID_THRESHOLD);
+            return {
+                success: true,
+                message: 'Unofficial group selections accepted',
+                groupsWritten: 0,
+                unofficialAccepted: accepted
+            };
         }
 
         const wcif = await getWCIF(delegateInfo.accessToken);
