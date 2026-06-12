@@ -11,7 +11,7 @@ interface GroupServiceResponse {
         name: string;
         wcaId: string;
         eventIds: string[];
-    };
+    } | null;
     availableGroups: AvailableGroup[];
 }
 
@@ -58,7 +58,10 @@ class GroupService {
         const person = await getPersonByWcaUserId(wcif, wcaUserId, db);
 
         if (!person || !person.registration) {
-            throw new Error('Not registered for this competition');
+            return {
+                person: null,
+                availableGroups: []
+            };
         }
 
         const registeredEvents = person.registration.eventIds || [];
