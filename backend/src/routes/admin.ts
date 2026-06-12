@@ -33,7 +33,7 @@ router.get('/pending-groups', isAuthenticated, isDelegate, async (req: Request, 
     }
 });
 
-router.post('/write-wcif', isAuthenticated, isDelegate, async (req: Request, res: Response) => {
+router.post('/accept-selections', isAuthenticated, isDelegate, async (req: Request, res: Response) => {
     try {
         const db = req.app.locals.db;
         const wcaUserId = req.session.wcaUserId!;

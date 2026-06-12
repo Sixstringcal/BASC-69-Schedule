@@ -151,6 +151,7 @@ export interface GroupInfo {
   maxCapacity: number;
   isFull: boolean;
   isSelected: boolean;
+  isAccepted: boolean;
   isAssigned: boolean;
 }
 

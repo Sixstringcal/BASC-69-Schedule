@@ -75,7 +75,11 @@ class GroupService {
 
         const selections = await GroupSelectionModel.findByRegistrantId(db, person.registrantId!);
         const userSelections: Record<number, number> = {};
-        selections.forEach(sel => { userSelections[sel.activityId] = sel.groupNumber; });
+        const acceptedActivityIds = new Set<number>();
+        selections.forEach(sel => {
+            userSelections[sel.activityId] = sel.groupNumber;
+            if (sel.accepted) acceptedActivityIds.add(sel.activityId);
+        });
 
         // How many pending selections exist per group
         const [groupCounts] = await db.query<any[]>(
@@ -130,6 +134,7 @@ class GroupService {
                             maxCapacity: maxPerGroup,
                             isFull: currentCount >= maxPerGroup,
                             isSelected: userSelections[groupActivity.id] === groupParsed.groupNumber,
+                            isAccepted: acceptedActivityIds.has(groupActivity.id),
                             isAssigned: assignedActivityIds.has(groupActivity.id)
                         });
                     }
@@ -168,6 +173,7 @@ class GroupService {
                     maxCapacity,
                     isFull: selectionCount >= maxCapacity,
                     isSelected: userSelections[groupDef.id] === groupDef.groupNumber,
+                    isAccepted: acceptedActivityIds.has(groupDef.id),
                     isAssigned: false
                 });
             }
@@ -221,6 +227,10 @@ class GroupService {
                 const unofficialRegs = await UnofficialRegistrationModel.findByWcaUserId(db, wcaUserId);
                 if (!unofficialRegs.some(r => r.eventId === eventId)) {
                     throw new Error('Not registered for this event');
+                }
+                const alreadyAccepted = await GroupSelectionModel.isAccepted(db, wcaUserId, activityId);
+                if (alreadyAccepted) {
+                    throw new Error('This group selection has been accepted and can no longer be changed');
                 }
 
                 const maxCapacity = settings.maxPerGroup ?? 9999;
@@ -308,6 +318,10 @@ class GroupService {
     }
 
     static async deselectGroup(db: Pool, wcaUserId: string, activityId: number): Promise<{ success: boolean }> {
+        const accepted = await GroupSelectionModel.isAccepted(db, wcaUserId, activityId);
+        if (accepted) {
+            throw new Error('This group selection has been accepted and can no longer be changed');
+        }
         await GroupSelectionModel.deleteByWcaUserIdAndActivity(db, wcaUserId, activityId);
         return { success: true };
     }

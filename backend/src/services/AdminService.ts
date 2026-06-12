@@ -37,10 +37,11 @@ interface PendingGroupsResponse {
     }>;
 }
 
-interface WriteToWCIFResponse {
+interface AcceptGroupsResponse {
     success: boolean;
     message?: string;
     groupsWritten: number;
+    unofficialAccepted: number;
 }
 
 interface DelegateInfo {
@@ -123,7 +124,7 @@ class AdminService {
         };
     }
 
-    static async writeToWCIF(db: Pool, delegateInfo: DelegateInfo): Promise<WriteToWCIFResponse> {
+    static async writeToWCIF(db: Pool, delegateInfo: DelegateInfo): Promise<AcceptGroupsResponse> {
         // Synthetic activity IDs (>= 1000000) are for unofficial events and cannot
         // be written to the WCA WCIF — skip them.
         const SYNTHETIC_ID_THRESHOLD = 1000000;
@@ -310,11 +311,13 @@ class AdminService {
         if (updatedPersons.length === 0) {
             console.log('[writeToWCIF] All persons\' assignments are already up-to-date in WCA — no PATCH needed.');
             const deleted = await GroupSelectionModel.deleteAllBelowThreshold(db, SYNTHETIC_ID_THRESHOLD);
-            console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) (already up-to-date).`);
+            const accepted = await GroupSelectionModel.acceptAllAboveThreshold(db, SYNTHETIC_ID_THRESHOLD);
+            console.log(`[writeToWCIF] Cleared ${deleted} official selection(s), accepted ${accepted} unofficial selection(s).`);
             return {
                 success: true,
                 message: 'All assignments are already up-to-date in WCA (no changes to write)',
-                groupsWritten: 0
+                groupsWritten: 0,
+                unofficialAccepted: accepted
             };
         }
 
@@ -346,14 +349,16 @@ class AdminService {
             );
 
             const deleted = await GroupSelectionModel.deleteAllBelowThreshold(db, SYNTHETIC_ID_THRESHOLD);
-            console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) after successful write.`);
+            const accepted = await GroupSelectionModel.acceptAllAboveThreshold(db, SYNTHETIC_ID_THRESHOLD);
+            console.log(`[writeToWCIF] Cleared ${deleted} official selection(s), accepted ${accepted} unofficial selection(s).`);
 
             invalidateWCIFCache();
 
             return {
                 success: true,
                 message: 'Groups successfully written to WCIF',
-                groupsWritten: selections.length
+                groupsWritten: selections.length,
+                unofficialAccepted: accepted
             };
 
         } catch (error: any) {

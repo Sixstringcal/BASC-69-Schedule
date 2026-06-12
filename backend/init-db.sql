@@ -20,6 +20,7 @@ CREATE TABLE IF NOT EXISTS group_selections (
     activity_id INT NOT NULL,
     activity_name VARCHAR(255) NOT NULL,
     group_number INT NOT NULL,
+    accepted TINYINT(1) NOT NULL DEFAULT 0,
     selected_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     UNIQUE KEY unique_selection (registrant_id, activity_id),
     INDEX idx_activity (activity_id),

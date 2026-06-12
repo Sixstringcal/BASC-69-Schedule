@@ -227,11 +227,13 @@ function renderGroupSelection(data, unofficialData) {
         
         for (const group of activity.groups) {
             const isSelected = group.isSelected;
+            const isAccepted = group.isAccepted;
             const isAssigned = group.isAssigned;
             const isFull = group.isFull;
+            const isLocked = isAssigned || isAccepted;
             const canSelect = !isFull;
-            const statusClass = isAssigned ? 'assigned' : (isSelected ? 'selected' : (isFull ? 'full' : ''));
-            
+            const statusClass = isAssigned ? 'assigned' : (isAccepted ? 'accepted' : (isSelected ? 'selected' : (isFull ? 'full' : '')));
+
             html += `
                 <div class="group-option ${statusClass}" data-activity-id="${group.activityId}" data-group-number="${group.groupNumber}">
                     <div class="group-header">
@@ -242,12 +244,13 @@ function renderGroupSelection(data, unofficialData) {
                         ${formatTime(group.startTime)} - ${formatTime(group.endTime)}
                     </div>
                     ${isAssigned ? '<div class="assigned-badge">📋 Already Assigned</div>' : ''}
+                    ${isAccepted ? '<div class="assigned-badge">✅ Accepted</div>' : ''}
                     <button class="select-group-btn"
-                            ${!canSelect && !isSelected ? 'disabled' : ''}
-                            onclick="${isSelected ? `deselectGroup(${group.activityId})` : `selectGroup(${group.activityId}, ${group.groupNumber})`}"
+                            ${(!canSelect && !isSelected) || isLocked ? 'disabled' : ''}
+                            onclick="${isSelected && !isLocked ? `deselectGroup(${group.activityId})` : `selectGroup(${group.activityId}, ${group.groupNumber})`}"
                             data-activity-id="${group.activityId}"
                             data-group-number="${group.groupNumber}">
-                        ${isSelected ? '✓ Selected (click to remove)' : (isFull ? 'Full' : 'Select')}
+                        ${isAccepted ? '✅ Accepted' : (isSelected ? '✓ Selected (click to remove)' : (isFull ? 'Full' : 'Select'))}
                     </button>
                 </div>
             `;
@@ -424,9 +427,9 @@ function renderAdminPanel(data) {
 
     let html = `
         <div class="admin-header">
-            <h3>Pending Group Selections</h3>
+            <h3>Group Selections</h3>
             <p>Total selections: ${data.totalSelections}</p>
-            <button class="write-wcif-btn" onclick="writeToWCIF()">Write to WCIF</button>
+            <button class="write-wcif-btn" onclick="acceptGroupSelections()">Accept Group Selections</button>
             <button class="clear-selections-btn" onclick="clearSelections()">Clear All Selections</button>
         </div>
         <div class="admin-groups-list">
@@ -495,27 +498,27 @@ function renderAdminPanel(data) {
     content.innerHTML = html;
 }
 
-// Write groups to WCIF
-async function writeToWCIF() {
-    if (!confirm('Are you sure you want to write these group selections to the WCIF? This will update the competitor assignments on the WCA website.')) {
+// Accept group selections: writes official events to WCIF, marks unofficial events as accepted in DB
+async function acceptGroupSelections() {
+    if (!confirm('Accept all group selections? Official event groups will be written to the WCA website. Unofficial event groups (e.g. 9x9) will be confirmed in our system.')) {
         return;
     }
-    
+
     try {
-        showNotification('Writing to WCIF...', 'info');
-        
+        showNotification('Accepting group selections...', 'info');
+
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
-        const response = await fetch(`${API_BASE_URL}/api/admin/write-wcif`, {
+
+        const response = await fetch(`${API_BASE_URL}/api/admin/accept-selections`, {
             method: 'POST',
             credentials: 'include',
             headers
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             if (data.wcaRequestId) {
                 const reportLink = data.reportUrl
@@ -528,17 +531,19 @@ async function writeToWCIF() {
                     true
                 );
             } else {
-                throw new Error(data.error || 'Failed to write to WCIF');
+                throw new Error(data.error || 'Failed to accept group selections');
             }
             return;
         }
-        
-        showNotification(`Successfully wrote ${data.groupsWritten} group assignments to WCIF!`, 'success');
-        
-        // Reload pending groups
+
+        const parts = [];
+        if (data.groupsWritten > 0) parts.push(`${data.groupsWritten} official group(s) written to WCIF`);
+        if (data.unofficialAccepted > 0) parts.push(`${data.unofficialAccepted} unofficial group(s) accepted`);
+        showNotification(parts.length > 0 ? parts.join(', ') + '.' : data.message, 'success');
+
         await loadAdminPanel();
     } catch (error) {
-        console.error('Write WCIF error:', error);
+        console.error('Accept selections error:', error);
         showNotification(error.message, 'error');
     }
 }
