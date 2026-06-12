@@ -309,7 +309,7 @@ class AdminService {
 
         if (updatedPersons.length === 0) {
             console.log('[writeToWCIF] All persons\' assignments are already up-to-date in WCA — no PATCH needed.');
-            const deleted = await GroupSelectionModel.deleteAll(db);
+            const deleted = await GroupSelectionModel.deleteAllBelowThreshold(db, SYNTHETIC_ID_THRESHOLD);
             console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) (already up-to-date).`);
             return {
                 success: true,
@@ -345,7 +345,7 @@ class AdminService {
                 ['success', writeId]
             );
 
-            const deleted = await GroupSelectionModel.deleteAll(db);
+            const deleted = await GroupSelectionModel.deleteAllBelowThreshold(db, SYNTHETIC_ID_THRESHOLD);
             console.log(`[writeToWCIF] Cleared ${deleted} group selection(s) after successful write.`);
 
             invalidateWCIFCache();

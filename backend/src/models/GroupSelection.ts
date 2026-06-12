@@ -97,6 +97,14 @@ class GroupSelectionModel {
         const [result]: any = await db.execute('DELETE FROM group_selections');
         return result.affectedRows;
     }
+
+    static async deleteAllBelowThreshold(db: Pool, threshold: number): Promise<number> {
+        const [result]: any = await db.execute(
+            'DELETE FROM group_selections WHERE activity_id < ?',
+            [threshold]
+        );
+        return result.affectedRows;
+    }
 }
 
 export default GroupSelectionModel;
