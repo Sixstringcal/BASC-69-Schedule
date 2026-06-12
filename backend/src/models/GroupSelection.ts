@@ -64,6 +64,7 @@ class GroupSelectionModel {
                     ot.name as competitorName, ot.wca_id as wcaId
              FROM group_selections gs
              JOIN oauth_tokens ot ON gs.wca_user_id = ot.wca_user_id
+             WHERE gs.accepted = 0
              ORDER BY gs.activity_id, gs.group_number, gs.selected_at`
         );
         return rows;
