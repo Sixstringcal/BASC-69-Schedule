@@ -13,6 +13,7 @@ interface GroupServiceResponse {
         eventIds: string[];
     } | null;
     availableGroups: AvailableGroup[];
+    timezone: string;
 }
 
 interface SelectGroupResponse {
@@ -57,10 +58,13 @@ class GroupService {
         const wcif = await getWCIFForUser(db, wcaUserId);
         const person = await getPersonByWcaUserId(wcif, wcaUserId, db);
 
+        const timezone = wcif.schedule.venues[0]?.timezone || 'UTC';
+
         if (!person || !person.registration) {
             return {
                 person: null,
-                availableGroups: []
+                availableGroups: [],
+                timezone
             };
         }
 
@@ -202,7 +206,8 @@ class GroupService {
                 wcaId: person.wcaId,
                 eventIds: registeredEvents
             },
-            availableGroups
+            availableGroups,
+            timezone
         };
     }
 

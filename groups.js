@@ -169,6 +169,7 @@ async function loadGroupSelection() {
 function renderGroupSelection(data, unofficialData) {
     const content = document.getElementById('groupsContent');
     const unofficialEvents = (unofficialData && unofficialData.events) || [];
+    const timezone = data.timezone;
 
     let html = '';
 
@@ -220,7 +221,7 @@ function renderGroupSelection(data, unofficialData) {
             <div class="activity-groups">
                 <div class="activity-header">
                     <h4>${activity.activityName}</h4>
-                    <span class="activity-meta">${activity.room} • ${formatTime(activity.startTime)} - ${formatTime(activity.endTime)}</span>
+                    <span class="activity-meta">${activity.room} • ${formatTime(activity.startTime, timezone)} - ${formatTime(activity.endTime, timezone)}</span>
                 </div>
                 <div class="groups-grid">
         `;
@@ -241,7 +242,7 @@ function renderGroupSelection(data, unofficialData) {
                         <span class="group-capacity ${isFull ? 'full' : ''}">${group.currentCount}/${group.maxCapacity}</span>
                     </div>
                     <div class="group-time">
-                        ${formatTime(group.startTime)} - ${formatTime(group.endTime)}
+                        ${formatTime(group.startTime, timezone)} - ${formatTime(group.endTime, timezone)}
                     </div>
                     ${isAssigned ? '<div class="assigned-badge">📋 Already Assigned</div>' : ''}
                     ${isAccepted ? '<div class="assigned-badge">✅ Accepted</div>' : ''}
@@ -668,9 +669,11 @@ async function logout() {
 }
 
 // Utility: Format time
-function formatTime(isoString) {
+function formatTime(isoString, timezone) {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true });
+    const opts = { hour: '2-digit', minute: '2-digit', hour12: true };
+    if (timezone) opts.timeZone = timezone;
+    return date.toLocaleTimeString('en-US', opts);
 }
 
 // Utility: Show notification

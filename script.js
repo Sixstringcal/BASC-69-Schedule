@@ -287,7 +287,7 @@ function renderSchedule(dayIndex) {
     timeSlots.forEach(time => {
         const timeSlot = document.createElement('div');
         timeSlot.className = 'time-slot';
-        timeSlot.textContent = formatTime(time);
+        timeSlot.textContent = formatTime(time, timezone);
         timeColumn.appendChild(timeSlot);
     });
     
@@ -351,7 +351,7 @@ function renderSchedule(dayIndex) {
             activityBlock.style.borderLeftColor = room.color;
             
             const activityName = formatActivityName(activity.name, activity.activityCode);
-            const timeRange = `${formatTime(actStart)} - ${formatTime(actEnd)}`;
+            const timeRange = `${formatTime(actStart, timezone)} - ${formatTime(actEnd, timezone)}`;
             const showInfoBtn = hasRelevantInfo(activityName, activity.activityCode);
             
             activityBlock.innerHTML = `
@@ -616,19 +616,17 @@ function formatDateRange(startDate, numberOfDays) {
     return `${start.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })} - ${end.toLocaleDateString('en-US', { month: 'long', day: 'numeric', year: 'numeric', timeZone: 'UTC' })}`;
 }
 
-function formatTimeRange(startTime, endTime) {
+function formatTimeRange(startTime, endTime, timezone) {
     const start = new Date(startTime);
     const end = new Date(endTime);
-    
-    return `${formatTime(start)} - ${formatTime(end)}`;
+
+    return `${formatTime(start, timezone)} - ${formatTime(end, timezone)}`;
 }
 
-function formatTime(date) {
-    return date.toLocaleTimeString('en-US', { 
-        hour: 'numeric', 
-        minute: '2-digit',
-        hour12: true 
-    });
+function formatTime(date, timezone) {
+    const opts = { hour: 'numeric', minute: '2-digit', hour12: true };
+    if (timezone) opts.timeZone = timezone;
+    return date.toLocaleTimeString('en-US', opts);
 }
 
 function formatActivityName(name, code) {
