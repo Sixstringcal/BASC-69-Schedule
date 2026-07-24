@@ -27,10 +27,6 @@
     {
       "id": "linear_fmc",
       "name": "Linear FMC"
-    },
-    {
-      "id": "fmc_duel",
-      "name": "FMC Duel"
     }
   ],
   "disabledEvents": [

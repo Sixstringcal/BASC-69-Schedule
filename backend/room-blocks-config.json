@@ -1,0 +1,32 @@
+[
+  {
+    "name": "Dance Dance Revolution Tournament",
+    "blurb": "• <strong>Format:</strong> 8-player limit, single elimination, skill-based seeding.<br>• <strong>Matches:</strong> 1v1 (Best of 3 songs).<br>• <strong>Song Selection:</strong> Higher seed elects P1/P2 side or card draw order (7 cards drawn from a 6-song pool per round with pick/bans).",
+    "hasSignups": true,
+    "maxCapacity": 8
+  },
+  {
+    "name": "Guitar Hero III Tournament",
+    "blurb": "• <strong>Format:</strong> 8-player limit, single elimination, skill-based seeding.<br>• <strong>Matches:</strong> 1v1 (Best of 3 songs).<br>• <strong>Song Selection:</strong> Higher seed elects P1/P2 side or card draw order (7 cards drawn from a 6-song pool per round with pick/bans).",
+    "hasSignups": true,
+    "maxCapacity": 8
+  },
+  {
+    "name": "Smash Bros Tournament",
+    "blurb": "• <strong>Format:</strong> 8-player limit, single elimination.<br>• <strong>Ruleset:</strong> 3 Stock, 5 Minutes, No Items.<br>• <strong>Matches:</strong> 1v1 (Best of 3 games).",
+    "hasSignups": true,
+    "maxCapacity": 8
+  },
+  {
+    "name": "Cube Master",
+    "blurb": "• <strong>Format:</strong> 25-player limit across 2 rounds.<br>• <strong>Photo Submission:</strong> Judged by Sam Fang (<a href=\"https://www.youtube.com/@CubeMasterYT\" target=\"_blank\">Cube Master on YouTube</a>).<br>• <strong>Round 1 (Groups):</strong> Live 5-person group challenges (unique mystery task per group) judged by our live Cube Master. Top performer per group advances.<br>• <strong>Final Round:</strong> 1 final surprise task, attempted individually while sequestered.",
+    "hasSignups": true,
+    "maxCapacity": 25
+  },
+  {
+    "name": "Chess Tournament",
+    "blurb": "• <strong>Format:</strong> 8-player limit, single elimination.<br>• <strong>Matches:</strong> 1v1 head-to-head bracket.<br>• <strong>Time Control:</strong> 5-Minute Blitz (5+0 per player).",
+    "hasSignups": true,
+    "maxCapacity": 8
+  }
+]

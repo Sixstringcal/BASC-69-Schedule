@@ -1,10 +1,14 @@
 // API Configuration
-const API_BASE_URL = 'https://basc69-schedule-backend-d86998e8386e.herokuapp.com';
+const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : 'https://basc69-schedule-backend-d86998e8386e.herokuapp.com';
 
 // Global state
 let currentUser = null;
 let isDelegate = false;
 let lastAdminData = null;
+let currentUserRegistration = null;
+let userSharedEmail = '';
 
 // Initialize group selection functionality
 async function initGroupSelection() {
@@ -89,6 +93,12 @@ function setupTabNavigation() {
             // Load tab content
             if (tabName === 'groups') {
                 loadGroupSelection();
+            } else if (tabName === 'roomBlocks') {
+                loadRoomBlocks();
+            } else if (tabName === 'panels') {
+                loadPanels();
+            } else if (tabName === 'tshirt') {
+                loadTShirt();
             } else if (tabName === 'admin') {
                 loadAdminPanel();
             }
@@ -397,18 +407,34 @@ async function loadAdminPanel() {
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
         
-        const response = await fetch(`${API_BASE_URL}/api/admin/pending-groups`, {
-            credentials: 'include',
-            headers
-        });
+        const [pendingRes, roomBlocksRes, roomBlocksRegsRes, panelsRes, tshirtRes] = await Promise.all([
+            fetch(`${API_BASE_URL}/api/admin/pending-groups`, { credentials: 'include', headers }),
+            fetch(`${API_BASE_URL}/api/room-blocks/public`, { credentials: 'include', headers }),
+            fetch(`${API_BASE_URL}/api/room-blocks/admin/registrations`, { credentials: 'include', headers }),
+            fetch(`${API_BASE_URL}/api/panels/admin/submissions`, { credentials: 'include', headers }),
+            fetch(`${API_BASE_URL}/api/tshirt/admin/summary`, { credentials: 'include', headers })
+        ]);
         
-        if (!response.ok) {
-            throw new Error('Failed to load pending groups');
+        if (!pendingRes.ok || !roomBlocksRes.ok || !roomBlocksRegsRes.ok || !panelsRes.ok || !tshirtRes.ok) {
+            throw new Error('Failed to load some admin data');
         }
         
-        const data = await response.json();
-        lastAdminData = data;
-        renderAdminPanel(data);
+        const pendingData = await pendingRes.json();
+        const roomBlocksData = await roomBlocksRes.json();
+        const roomBlocksRegsData = await roomBlocksRegsRes.json();
+        const panelsData = await panelsRes.json();
+        const tshirtData = await tshirtRes.json();
+        
+        lastAdminData = {
+            ...pendingData,
+            roomBlocks: roomBlocksData.roomBlocks,
+            roomBlockRegistrations: roomBlocksRegsData.registrations,
+            panels: panelsData.submissions,
+            tshirtSummary: tshirtData.summary,
+            tshirtDetails: tshirtData.details
+        };
+        
+        renderAdminPanel(lastAdminData);
 
     } catch (error) {
         console.error('Load admin panel error:', error);
@@ -495,6 +521,151 @@ function renderAdminPanel(data) {
         }
         html += '</div>';
     }
+
+    // === ROOM BLOCKS ADMIN SECTION ===
+    const roomBlocks = data.roomBlocks || [];
+    const roomBlockRegs = data.roomBlockRegistrations || [];
+    
+    html += `
+        <div class="admin-unofficial-section" style="margin-top: 50px; border-top: 2px solid var(--border-color); padding-top: 30px;">
+            <div class="admin-unofficial-header">
+                <h3>Room Blocks & Tournaments</h3>
+                <button class="export-csv-btn" onclick="exportRoomBlockRegistrationsCSV()">Export Registrants CSV</button>
+            </div>
+            
+            <div style="text-align: left; margin-top: 20px;">
+                <!-- Room Blocks list & registrations -->
+                <div style="width: 100%;">
+    `;
+    
+    if (roomBlocks.length === 0) {
+        html += '<p>No room blocks created yet.</p>';
+    } else {
+        for (const block of roomBlocks) {
+            const blockRegs = roomBlockRegs.filter(r => r.roomBlockId === block.id);
+            const activeRegs = blockRegs.filter(r => r.status === 'registered');
+            const waitlistRegs = blockRegs.filter(r => r.status === 'waitlist');
+            
+            html += `
+                <div class="admin-activity" style="margin-bottom: 25px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
+                    <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
+                        <div>
+                            <h4 style="margin: 0; font-size: 1.15rem; color: var(--primary-color);">${block.name}</h4>
+                            <small style="color: var(--text-light);">${block.hasSignups ? `Capacity: ${block.maxCapacity} | Total Sign-ups: ${blockRegs.length}` : 'Info Only (No Sign-ups)'}</small>
+                        </div>
+                    </div>
+                    <p style="font-size: 0.9rem; color: var(--text-color); margin-bottom: 15px; font-style: italic;">${block.blurb || 'No description/blurb.'}</p>
+            `;
+            
+            if (block.hasSignups) {
+                html += `
+                    <div style="margin-top: 10px;">
+                        <strong style="font-size: 0.85rem; color: var(--text-color);">Accepted (${activeRegs.length}):</strong>
+                        ${activeRegs.length === 0 ? '<span style="font-size: 0.85rem; color: var(--text-light); margin-left: 5px;">None</span>' : `
+                            <ul style="margin: 5px 0 15px 15px; font-size: 0.85rem; padding-left: 10px;">
+                                ${activeRegs.map(r => `<li>${r.competitorName} ${r.wcaId ? `(${r.wcaId})` : ''} - <small style="color: var(--text-light);">${r.email}</small></li>`).join('')}
+                            </ul>
+                        `}
+                        
+                        <strong style="font-size: 0.85rem; color: var(--text-color);">Waitlist (${waitlistRegs.length}):</strong>
+                        ${waitlistRegs.length === 0 ? '<span style="font-size: 0.85rem; color: var(--text-light); margin-left: 5px;">Empty</span>' : `
+                            <ol style="margin: 5px 0 5px 15px; font-size: 0.85rem; padding-left: 10px;">
+                                ${waitlistRegs.map(r => `<li>${r.competitorName} ${r.wcaId ? `(${r.wcaId})` : ''} - <small style="color: var(--text-light);">${r.email}</small></li>`).join('')}
+                            </ol>
+                        `}
+                    </div>
+                `;
+            }
+            
+            html += '</div>';
+        }
+    }
+    
+    html += `
+                </div>
+            </div>
+        </div>
+    `;
+    
+    // === PANEL SUBMISSIONS ADMIN SECTION ===
+    const panels = data.panels || [];
+    html += `
+        <div class="admin-unofficial-section" style="margin-top: 50px; border-top: 2px solid var(--border-color); padding-top: 30px;">
+            <div class="admin-unofficial-header" style="margin-bottom: 20px;">
+                <h3>Panel Submissions</h3>
+                <button class="export-csv-btn" onclick="exportPanelSubmissionsCSV()">Export Proposals CSV</button>
+            </div>
+    `;
+    
+    if (panels.length === 0) {
+        html += '<p style="text-align: left;">No panel proposals submitted yet.</p>';
+    } else {
+        html += `
+            <div class="admin-table-container" style="padding: 0; box-shadow: none; margin-bottom: 0;">
+                <table class="admin-table">
+                    <thead>
+                        <tr>
+                            <th>Competitor</th>
+                            <th>WCA ID</th>
+                            <th>Email</th>
+                            <th>Panel Name</th>
+                            <th>Description</th>
+                            <th>Submitted At</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        ${panels.map(p => `
+                            <tr>
+                                <td><strong>${p.competitorName}</strong></td>
+                                <td>${p.wcaId ? `<a href="https://worldcubeassociation.org/persons/${p.wcaId}" target="_blank">${p.wcaId}</a>` : 'N/A'}</td>
+                                <td><a href="mailto:${p.email}">${p.email}</a></td>
+                                <td><strong>${p.panelName}</strong></td>
+                                <td><div style="max-height: 80px; overflow-y: auto; font-size: 0.85rem; max-width: 350px; line-height: 1.4; text-align: left;">${p.description}</div></td>
+                                <td>${new Date(p.submittedAt).toLocaleDateString()}</td>
+                            </tr>
+                        `).join('')}
+                    </tbody>
+                </table>
+            </div>
+        `;
+    }
+    html += '</div>';
+    
+    // === T-SHIRT SELECTIONS ADMIN SECTION ===
+    const tshirtSummary = data.tshirtSummary || [];
+    const tshirtDetails = data.tshirtDetails || [];
+    
+    html += `
+        <div class="admin-unofficial-section" style="margin-top: 50px; border-top: 2px solid var(--border-color); padding-top: 30px; margin-bottom: 30px;">
+            <div class="admin-unofficial-header" style="margin-bottom: 20px;">
+                <h3>T-Shirt Sizes Demand</h3>
+                <button class="export-csv-btn" onclick="exportTShirtSelectionsCSV()">Export Sizes CSV</button>
+            </div>
+            
+            <div style="text-align: left; margin-top: 20px;">
+                <div style="width: 100%; max-width: 500px;">
+                    <h4 style="margin-bottom: 10px;">Size Distribution</h4>
+                    <table class="admin-table">
+                        <thead>
+                            <tr>
+                                <th>Size</th>
+                                <th>Estimated Count Needed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            ${tshirtSummary.length === 0 ? '<tr><td colspan="2">No selections recorded.</td></tr>' : 
+                              tshirtSummary.map(ts => `
+                                <tr>
+                                    <td><strong>${ts.tshirtSize}</strong></td>
+                                    <td><strong>${ts.count}</strong></td>
+                                </tr>
+                              `).join('')}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    `;
 
     content.innerHTML = html;
 }
@@ -628,8 +799,610 @@ function exportUnofficialScorecards(eventId) {
     a.href = url;
     a.download = filename;
     a.click();
-    URL.revokeObjectURL(url);
 }
+
+// ==================== ROOM BLOCKS TAB ====================
+async function loadRoomBlocks() {
+    const content = document.getElementById('roomBlocksContent');
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading room blocks...</p></div>';
+    
+    try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`${API_BASE_URL}/api/room-blocks/public`, {
+            credentials: 'include',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to fetch room blocks');
+        
+        const data = await response.json();
+        currentUserRegistration = data.userRegistration;
+        if (currentUserRegistration && currentUserRegistration.email) {
+            userSharedEmail = currentUserRegistration.email;
+        } else {
+            try {
+                const panelRes = await fetch(`${API_BASE_URL}/api/panels/my-submissions`, {
+                    credentials: 'include',
+                    headers
+                });
+                if (panelRes.ok) {
+                    const panelData = await panelRes.json();
+                    if (panelData.submissions && panelData.submissions.length > 0) {
+                        userSharedEmail = panelData.submissions[0].email || '';
+                    } else {
+                        userSharedEmail = '';
+                    }
+                }
+            } catch (err) {
+                console.warn('Failed to check panel submissions:', err);
+            }
+        }
+        renderRoomBlocks(data.roomBlocks, data.userRegistration);
+    } catch (error) {
+        console.error(error);
+        content.innerHTML = `
+            <div class="message-box error">
+                <h3>Error</h3>
+                <p>Failed to load room blocks data.</p>
+            </div>
+        `;
+    }
+}
+
+function renderRoomBlocks(roomBlocks, userRegistration) {
+    const content = document.getElementById('roomBlocksContent');
+    let html = '';
+    
+    if (userRegistration) {
+        html += `
+            <div class="warning-box" style="border-left-color: var(--secondary-color); background: #f0faf0; text-align: center;">
+                <p style="color: #2c5e2e; font-weight: 600;">
+                    ✓ You are signed up for: <strong>${userRegistration.roomBlockName}</strong> 
+                    (${userRegistration.status === 'registered' ? 'Registered/Accepted' : `Waitlist Position #${userRegistration.waitlistPosition}`})
+                </p>
+            </div>
+        `;
+    }
+    
+    html += '<div class="room-blocks-grid">';
+    
+    for (const block of roomBlocks) {
+        const isRegisteredHere = userRegistration && userRegistration.roomBlockId === block.id;
+        const cardClass = isRegisteredHere ? 'room-block-card registered' : 'room-block-card';
+        
+        html += `
+            <div class="${cardClass}">
+                ${isRegisteredHere ? `
+                    <span class="room-block-badge reg" style="position: absolute; top: 12px; right: 12px; padding: 4px 8px; border-radius: 12px; font-size: 0.75rem; font-weight: 700; ${userRegistration.status === 'registered' ? 'background: #d4edda; color: #155724;' : 'background: #fff3cd; color: #856404;'}">${userRegistration.status === 'registered' ? 'Registered' : `Waitlist #${userRegistration.waitlistPosition}`}</span>
+                ` : ''}
+                <div class="room-block-name">${block.name}</div>
+                <div class="room-block-blurb">${block.blurb || 'No description available.'}</div>
+        `;
+        
+        if (block.hasSignups) {
+            html += `
+                <div class="room-block-stats">
+                    <div class="room-block-stat-row">
+                        <span>Capacity:</span>
+                        <strong>${block.maxCapacity} spots</strong>
+                    </div>
+                    <div class="room-block-stat-row">
+                        <span>Registered:</span>
+                        <strong>${block.registrationCount}/${block.maxCapacity}</strong>
+                    </div>
+                    <div class="room-block-stat-row">
+                        <span>Waitlist:</span>
+                        <strong>${block.waitlistCount} people</strong>
+                    </div>
+                </div>
+            `;
+            
+            if (currentUser) {
+                if (isRegisteredHere) {
+                    html += `
+                        <div class="room-block-actions" style="margin-top: auto;">
+                            <button class="btn-danger" style="width: 100%;" onclick="roomBlocksLeave(${block.id})">Leave Block</button>
+                        </div>
+                    `;
+                } else if (userRegistration) {
+                    const isFull = block.hasSignups && block.registrationCount >= block.maxCapacity;
+                    const switchText = isFull ? "Switch to Waitlist" : "Switch to this Block";
+                    html += `
+                        <div class="room-block-actions" style="margin-top: auto;">
+                            <button class="btn-primary" style="background-color: var(--secondary-color); width: 100%;" onclick="roomBlocksSwitch(${block.id}, '${block.name.replace(/'/g, "\\'")}', '${userRegistration.roomBlockName.replace(/'/g, "\\'")}')">${switchText}</button>
+                        </div>
+                    `;
+                } else {
+                    const isFull = block.hasSignups && block.registrationCount >= block.maxCapacity;
+                    const buttonText = isFull ? "Join Waitlist" : "Sign Up";
+                    html += `
+                        <div class="room-block-actions" id="signup-container-${block.id}" style="margin-top: auto; width: 100%;">
+                            <button class="btn-primary" style="width: 100%;" onclick="showSignupField(${block.id}, ${isFull})">${buttonText}</button>
+                        </div>
+                    `;
+                }
+            } else {
+                html += `
+                    <div style="margin-top: auto; text-align: center;">
+                        <a href="${API_BASE_URL}/auth/wca" class="login-btn" style="display: block; font-size: 0.9rem; padding: 8px 12px; text-decoration: none;">Login with WCA to Sign Up</a>
+                    </div>
+                `;
+            }
+        } else {
+            html += `
+                <div class="room-block-stats" style="text-align: center; color: var(--text-light); margin-top: auto;">
+                    <em>No sign-ups required. See schedule details.</em>
+                </div>
+            `;
+        }
+        
+        html += '</div>';
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+const DISCLAIMER_MSG = "Competitors will be limited to registering for a maximum of one event per person, as we cannot accommodate everyone competing in everything. We ask that you consider if you would enjoy these slots more as a competitor or a spectator. If you don’t really play Smash Bros/Guitar Hero/Dance Dance Revolution, we encourage you to wait a week before registering to allow those who actually play these games to register, especially since you will be able to play these casually in the room outside of the competitive bracket.";
+
+function showSignupField(blockId, isFull) {
+    const container = document.getElementById(`signup-container-${blockId}`);
+    if (!container) return;
+    
+    if (userSharedEmail) {
+        submitSignupDirect(blockId);
+        return;
+    }
+    
+    const buttonText = isFull ? "Join Waitlist" : "Confirm";
+    
+    container.innerHTML = `
+        <div class="form-group" style="margin-bottom: 10px; width: 100%;">
+            <input type="email" id="email-input-${blockId}" placeholder="Enter your email" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
+        </div>
+        <button class="btn-primary" style="width: 100%;" onclick="submitSignup(${blockId})">${buttonText}</button>
+    `;
+    
+    document.getElementById(`email-input-${blockId}`).focus();
+}
+
+async function submitSignupDirect(blockId) {
+    if (!confirm(DISCLAIMER_MSG)) return;
+    await executeRoomBlockRegister(blockId, userSharedEmail);
+}
+
+async function submitSignup(blockId) {
+    const emailInput = document.getElementById(`email-input-${blockId}`);
+    if (!emailInput) return;
+    
+    const email = emailInput.value.trim();
+    
+    // Email regex validation
+    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+    if (!emailRegex.test(email)) {
+        showNotification("Please enter a valid email address.", "error");
+        emailInput.focus();
+        return;
+    }
+    
+    if (!confirm(DISCLAIMER_MSG)) return;
+    
+    userSharedEmail = email; // Cache it
+    await executeRoomBlockRegister(blockId, email);
+}
+
+async function roomBlocksSwitch(roomBlockId, newBlockName, oldBlockName) {
+    const switchConfirmed = confirm(`You are currently registered for '${oldBlockName}'. Switching will drop you from this block. Are you sure you want to proceed?`);
+    if (!switchConfirmed) return;
+    
+    if (!confirm(DISCLAIMER_MSG)) return;
+    
+    const email = userSharedEmail;
+    if (!email) {
+        const emailInput = prompt("Please confirm your email address:", "");
+        if (!emailInput) return;
+        userSharedEmail = emailInput;
+        await executeRoomBlockRegister(roomBlockId, emailInput);
+    } else {
+        await executeRoomBlockRegister(roomBlockId, email);
+    }
+}
+
+async function executeRoomBlockRegister(roomBlockId, email) {
+    const token = localStorage.getItem('wca_auth_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/room-blocks/register`, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+            body: JSON.stringify({ roomBlockId, email })
+        });
+        if (response.ok) {
+            showNotification('Registered successfully!', 'success');
+            await loadRoomBlocks();
+        } else {
+            const err = await response.json();
+            showNotification(err.error || 'Failed to register', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Error during registration', 'error');
+    }
+}
+
+async function roomBlocksLeave(roomBlockId) {
+    if (!confirm("Are you sure you want to leave this room block? This will drop your registration and any waitlist positions.")) return;
+    
+    const token = localStorage.getItem('wca_auth_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/room-blocks/unregister`, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+            body: JSON.stringify({ roomBlockId })
+        });
+        if (response.ok) {
+            showNotification('Left room block successfully', 'success');
+            await loadRoomBlocks();
+        } else {
+            showNotification('Failed to leave room block', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Error leaving room block', 'error');
+    }
+}
+
+
+// ==================== PANEL SIGNUPS TAB ====================
+async function loadPanels() {
+    const content = document.getElementById('panelsContent');
+    
+    if (!currentUser) {
+        content.innerHTML = `
+            <div class="message-box">
+                <h3>Login Required</h3>
+                <p>Please log in with your WCA account to submit panels.</p>
+                <a href="${API_BASE_URL}/auth/wca" class="login-btn">Login with WCA</a>
+            </div>
+        `;
+        return;
+    }
+    
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading your panels...</p></div>';
+    
+    try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`${API_BASE_URL}/api/panels/my-submissions`, {
+            credentials: 'include',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to load panels');
+        
+        const data = await response.json();
+        if (data.submissions && data.submissions.length > 0) {
+            userSharedEmail = data.submissions[0].email || userSharedEmail;
+        } else {
+            if (!currentUserRegistration) {
+                userSharedEmail = '';
+            }
+        }
+        renderPanels(data.submissions);
+    } catch (error) {
+        console.error(error);
+        content.innerHTML = `
+            <div class="message-box error">
+                <h3>Error</h3>
+                <p>Failed to load panels.</p>
+            </div>
+        `;
+    }
+}
+
+function renderPanels(submissions) {
+    const content = document.getElementById('panelsContent');
+    
+    // Determine a default email if they have already provided one
+    if (submissions && submissions.length > 0) {
+        userSharedEmail = submissions[0].email || userSharedEmail;
+    } else if (currentUserRegistration && currentUserRegistration.email) {
+        userSharedEmail = currentUserRegistration.email;
+    }
+    
+    let emailFieldHtml = '';
+    if (!userSharedEmail) {
+        emailFieldHtml = `
+            <div class="form-group">
+                <label for="panel-email">Email Address</label>
+                <input type="email" id="panel-email" placeholder="your@email.com" required>
+                <span class="form-help">We collect your email so we can contact you to schedule your panel.</span>
+            </div>
+        `;
+    }
+    
+    let html = `
+        <form onsubmit="panelsSubmit(event)" class="custom-form">
+            <h3>Submit a Panel</h3>
+            <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.9rem;">
+                Host a panel or presentation at the competition! Share your speedcubing knowledge, collection, or other fun ideas with the community.
+            </p>
+            <div class="form-group">
+                <label for="panel-name">Panel Name</label>
+                <input type="text" id="panel-name" placeholder="e.g. History of Rubik's Cube Mods" required>
+            </div>
+            <div class="form-group">
+                <label for="panel-desc">Panel Description</label>
+                <textarea id="panel-desc" rows="4" placeholder="Briefly describe what your panel is about and what you'll need." required></textarea>
+            </div>
+            ${emailFieldHtml}
+            <button type="submit" class="btn-primary">Submit Panel Proposal</button>
+        </form>
+    `;
+    
+    html += '<div class="submissions-list">';
+    html += '<h3>Your Submissions</h3>';
+    
+    if (submissions.length === 0) {
+        html += '<p style="color: var(--text-light); margin-top: 15px;">You have not submitted any panels yet.</p>';
+    } else {
+        for (const sub of submissions) {
+            html += `
+                <div class="submission-item">
+                    <div class="submission-details">
+                        <h4>${sub.panelName}</h4>
+                        <p>${sub.description}</p>
+                        <small style="color: var(--text-light); display: block; margin-top: 5px;">
+                            Submitted at: ${new Date(sub.submittedAt).toLocaleDateString()} | Contact: ${sub.email}
+                        </small>
+                    </div>
+                    <button class="btn-danger" onclick="panelsDelete(${sub.id})">Delete</button>
+                </div>
+            `;
+        }
+    }
+    
+    html += '</div>';
+    content.innerHTML = html;
+}
+
+async function panelsSubmit(e) {
+    if (e) e.preventDefault();
+    const token = localStorage.getItem('wca_auth_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    const panelName = document.getElementById('panel-name').value;
+    const description = document.getElementById('panel-desc').value;
+    
+    let email = userSharedEmail;
+    const emailInput = document.getElementById('panel-email');
+    if (emailInput) {
+        email = emailInput.value.trim();
+        // Email regex validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            showNotification("Please enter a valid email address.", "error");
+            emailInput.focus();
+            return;
+        }
+        userSharedEmail = email; // Cache it
+    }
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/panels/submit`, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+            body: JSON.stringify({ panelName, description, email })
+        });
+        
+        if (response.ok) {
+            showNotification('Panel proposal submitted!', 'success');
+            await loadPanels();
+        } else {
+            showNotification('Failed to submit panel proposal', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Error submitting panel', 'error');
+    }
+}
+
+async function panelsDelete(id) {
+    if (!confirm('Are you sure you want to delete this panel proposal?')) return;
+    
+    const token = localStorage.getItem('wca_auth_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/panels/my-submissions/${id}`, {
+            method: 'DELETE',
+            credentials: 'include',
+            headers
+        });
+        
+        if (response.ok) {
+            showNotification('Panel proposal deleted', 'success');
+            await loadPanels();
+        } else {
+            showNotification('Failed to delete panel proposal', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Error deleting panel', 'error');
+    }
+}
+
+
+// ==================== T-SHIRT SIZE SELECTION TAB ====================
+async function loadTShirt() {
+    const content = document.getElementById('tshirtContent');
+    
+    if (!currentUser) {
+        content.innerHTML = `
+            <div class="message-box">
+                <h3>Login Required</h3>
+                <p>Please log in with your WCA account to select T-Shirt sizes.</p>
+                <a href="${API_BASE_URL}/auth/wca" class="login-btn">Login with WCA</a>
+            </div>
+        `;
+        return;
+    }
+    
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading T-shirt settings...</p></div>';
+    
+    try {
+        const token = localStorage.getItem('wca_auth_token');
+        const headers = { 'Content-Type': 'application/json' };
+        if (token) headers['Authorization'] = `Bearer ${token}`;
+        
+        const response = await fetch(`${API_BASE_URL}/api/tshirt/my-selection`, {
+            credentials: 'include',
+            headers
+        });
+        if (!response.ok) throw new Error('Failed to load size choice');
+        
+        const data = await response.json();
+        renderTShirt(data.selection);
+    } catch (error) {
+        console.error(error);
+        content.innerHTML = `
+            <div class="message-box error">
+                <h3>Error</h3>
+                <p>Failed to load T-shirt size selections.</p>
+            </div>
+        `;
+    }
+}
+
+function renderTShirt(selection) {
+    const content = document.getElementById('tshirtContent');
+    const selectedSize = selection ? selection.tshirtSize : '';
+    
+    let html = `
+        <div class="warning-box">
+            <p>
+                <strong>Important Note:</strong> We are <strong>not pre-selling T-shirts online</strong>. 
+                We will be custom heat pressing them live at the competition! 
+                We are collecting this data solely to ensure we order a sufficient quantity of blank shirts in each size. 
+                Selecting a size helps us estimate demand so everyone gets their preferred fit.
+            </p>
+        </div>
+        
+        <form onsubmit="tshirtSubmit(event)" class="custom-form">
+            <h3>Select T-Shirt Size</h3>
+            
+            ${selectedSize ? `
+                <div style="background: #e6f4ea; border-radius: 6px; padding: 12px; margin-bottom: 20px; font-size: 0.95rem; color: #137333; font-weight: 600; text-align: center;">
+                    ✓ Current Selection: ${selectedSize}
+                </div>
+            ` : ''}
+            
+            <div class="form-group">
+                <label for="tshirt-size">Preferred Fit</label>
+                <select id="tshirt-size" required>
+                    <option value="" disabled ${!selectedSize ? 'selected' : ''}>-- Select Size --</option>
+                    <option value="XS" ${selectedSize === 'XS' ? 'selected' : ''}>Extra Small (XS)</option>
+                    <option value="S" ${selectedSize === 'S' ? 'selected' : ''}>Small (S)</option>
+                    <option value="M" ${selectedSize === 'M' ? 'selected' : ''}>Medium (M)</option>
+                    <option value="L" ${selectedSize === 'L' ? 'selected' : ''}>Large (L)</option>
+                    <option value="XL" ${selectedSize === 'XL' ? 'selected' : ''}>Extra Large (XL)</option>
+                    <option value="XXL" ${selectedSize === 'XXL' ? 'selected' : ''}>Double Extra Large (XXL)</option>
+                    <option value="XXXL" ${selectedSize === 'XXXL' ? 'selected' : ''}>Triple Extra Large (XXXL)</option>
+                </select>
+            </div>
+            
+            <button type="submit" class="btn-primary" style="width: 100%;">${selectedSize ? 'Update Size Selection' : 'Confirm Size Selection'}</button>
+        </form>
+    `;
+    
+    content.innerHTML = html;
+}
+
+async function tshirtSubmit(e) {
+    if (e) e.preventDefault();
+    const token = localStorage.getItem('wca_auth_token');
+    const headers = { 'Content-Type': 'application/json' };
+    if (token) headers['Authorization'] = `Bearer ${token}`;
+    
+    const size = document.getElementById('tshirt-size').value;
+    
+    try {
+        const response = await fetch(`${API_BASE_URL}/api/tshirt/select`, {
+            method: 'POST',
+            credentials: 'include',
+            headers,
+            body: JSON.stringify({ size })
+        });
+        
+        if (response.ok) {
+            showNotification('T-shirt size selection saved!', 'success');
+            await loadTShirt();
+        } else {
+            showNotification('Failed to save size selection', 'error');
+        }
+    } catch (e) {
+        console.error(e);
+        showNotification('Error saving T-shirt size', 'error');
+    }
+}
+
+
+// ==================== ADMIN ACTIONS & CSV EXPORTS ====================
+function exportRoomBlockRegistrationsCSV() {
+    if (!lastAdminData || !lastAdminData.roomBlockRegistrations) return;
+    const headers = ["ID", "Competitor Name", "WCA ID", "Email", "Room Block Name", "Status", "Waitlist Position", "Registered At"];
+    const rows = lastAdminData.roomBlockRegistrations.map(r => [
+        r.id,
+        r.competitorName,
+        r.wcaId || 'N/A',
+        r.email,
+        r.roomBlockName,
+        r.status,
+        r.status === 'waitlist' ? r.waitlistPosition : 'N/A',
+        r.registeredAt
+    ]);
+    downloadCSV("room_block_registrations.csv", headers, rows);
+}
+
+function exportPanelSubmissionsCSV() {
+    if (!lastAdminData || !lastAdminData.panels) return;
+    const headers = ["ID", "Competitor Name", "WCA ID", "Email", "Panel Name", "Description", "Submitted At"];
+    const rows = lastAdminData.panels.map(p => [
+        p.id,
+        p.competitorName,
+        p.wcaId || 'N/A',
+        p.email,
+        p.panelName,
+        p.description,
+        p.submittedAt
+    ]);
+    downloadCSV("panel_submissions.csv", headers, rows);
+}
+
+function exportTShirtSelectionsCSV() {
+    if (!lastAdminData || !lastAdminData.tshirtSummary) return;
+    const headers = ["Size", "Count"];
+    const rows = lastAdminData.tshirtSummary.map(t => [
+        t.tshirtSize,
+        t.count
+    ]);
+    downloadCSV("tshirt_sizes_distribution.csv", headers, rows);
+}
+
+
 
 // Logout function
 async function logout() {

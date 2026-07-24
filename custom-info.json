@@ -3,6 +3,43 @@
     "9x9x9 Cube": {
       "customTimeLimit": "1:00:00.00",
       "customFormat": "Best of 1 solve"
+    },
+    "FMC Duel": {
+      "description": "Head-to-head Fewest Moves Solving duel!  Top 8 competitors will get Competitors qualify based on prior FMC performance.",
+      "notes": "Competitors qualify based on Linear FMC performance."
+    },
+    "Dance Dance Revolution Tournament": {
+      "description": "8-player single elimination bracket (1v1, Best of 3 songs) featuring card-draw song selection and pick/bans."
+    },
+    "Guitar Hero III Tournament": {
+      "description": "8-player single elimination bracket (1v1, Best of 3 songs) featuring card-draw song selection and pick/bans."
+    },
+    "Chess Tournament": {
+      "description": "8-player single elimination bracket (1v1 head-to-head) using 5-minute Blitz (5+0) time control."
+    },
+    "Arcade": {
+      "description": "Watch <a href=\"https://www.youtube.com/@scalpel001\" target=\"_blank\">Stanley Chapel</a> do a live warpless run of Super Mario Bros Lost Levels on NES with a live tricks exhibition! Then feel free to play the arcade style games the rest of the block!"
+    },
+    "Cube Master Round 1": {
+      "description": "Complete a series of mystery tasks! 25-player limit. Features a pre-event photo submission phase judged by guest Sam Fang (<a href=\"https://www.youtube.com/@CubeMasterYT\" target=\"_blank\">Cube Master on YouTube</a>), followed by live 5-person group challenges (with a unique task per group) judged by our live event Cube Master. The top performer from each group advances to the Final!"
+    },
+    "Cube Master Final": {
+      "description": "The ultimate showdown! Finalists face one final mystery task performed individually while sequestered, judged by our live event Cube Master."
+    },
+    "Smash Tournament": {
+      "description": "8-player single elimination bracket (1v1, Best of 3 games) featuring 3 Stock, 5 Minutes, No Items ruleset on Nintendo Switch."
+    },
+    "Linear FMC": {
+      "description": "Linear Fewest Moves Solving competition! Solve the cube in as few moves as possible without backtracking."
+    },
+    "Rhythm Games Block": {
+      "description": "Rhythm Games area featuring Dance Dance Revolution and Guitar Hero III tournaments!  Rock Band 4 will be available for full band free play without registration, Taiko no Tatsujin will be available for free play without registration, and DDR will also be available for free play without registration."
+    },
+    "6.25 Contest Round 1": {
+      "description": "The 6.25 Contest! Competitors will attempt to stop a timer at exactly 6.25 seconds.  The closest to 6.25 seconds wins!  The closest in each group advances to the final round!"
+    },
+    "6.25 Contest Final": {
+      "description": "Final round of the 6.25 Contest!"
     }
   },
   "globalSettings": {
@@ -21,22 +58,5 @@
     "customFormat": "Override WCIF format (e.g., 'Average of 5', 'Best of 3')",
     "advancement": "Custom advancement condition (overrides WCIF)",
     "extraInfo": "Any additional custom fields as key-value pairs"
-  },
-  "examples": {
-    "comment": "Below are more examples you can use as templates. Use the exact activity name as shown in the schedule.",
-    "3x3x3 Blindfolded, Round 1": {
-      "description": "Memorize, then solve while blindfolded!",
-      "notes": "Remember to bring your own blindfold. Inspection time is 60 seconds max."
-    },
-    "Competitor Meeting": {
-      "description": "Mandatory meeting for all competitors. Important announcements will be made.",
-      "icon": "",
-      "notes": "Attendance is required!"
-    },
-    "5x5x5 Cube, Round 1": {
-      "customTimeLimit": "5:00",
-      "description": "Solve the Professor's Cube!",
-      "advancement": "Top 50% advance to finals"
-    }
   }
 }

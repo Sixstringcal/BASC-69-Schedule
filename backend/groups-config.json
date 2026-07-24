@@ -6,8 +6,7 @@
     { "id": "333_doubles", "name": "3x3x3 Doubles", "format": "a", "timeLimit": 13800, "cutoff": { "numberOfAttempts": 2, "attemptResult": 6000 } },
     { "id": "333_team_blind", "name": "3x3x3 Team-Blind With Inspection", "format": "a", "timeLimit": 13800, "cutoff": { "numberOfAttempts": 2, "attemptResult": 6000 } },
     { "id": "625_contest", "name": "6.25 Contest", "format": "5", "timeLimit": null, "cutoff": null },
-    { "id": "linear_fmc", "name": "Linear FMC", "format": "m", "timeLimit": 12000, "cutoff": null },
-    { "id": "fmc_duel", "name": "FMC Duel", "format": null, "timeLimit": 12000, "cutoff": null }
+    { "id": "linear_fmc", "name": "Linear FMC", "format": "m", "timeLimit": 12000, "cutoff": null }
   ],
   "disabledEvents": ["222"],
   "unofficialGroupSettings": {

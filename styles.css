@@ -1278,3 +1278,279 @@ section h2 {
         grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
     }
 }
+
+/* Custom Features CSS - Room Blocks, Panels, T-Shirts */
+
+/* Form Elements */
+.custom-form {
+    background: var(--card-bg);
+    padding: 30px;
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    max-width: 600px;
+    margin: 20px auto 40px;
+}
+
+.form-group {
+    margin-bottom: 20px;
+    display: flex;
+    flex-direction: column;
+    text-align: left;
+}
+
+.form-group label {
+    font-weight: 600;
+    margin-bottom: 8px;
+    color: var(--text-color);
+}
+
+.form-group input,
+.form-group textarea,
+.form-group select {
+    padding: 10px 12px;
+    border: 1px solid var(--border-color);
+    border-radius: 6px;
+    font-family: inherit;
+    font-size: 1rem;
+    color: var(--text-color);
+    background: #fff;
+    transition: border-color 0.2s;
+}
+
+.form-group input:focus,
+.form-group textarea:focus,
+.form-group select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+.form-help {
+    font-size: 0.85rem;
+    color: var(--text-light);
+    margin-top: 4px;
+}
+
+.btn-primary {
+    background: var(--primary-color);
+    color: #fff;
+    border: none;
+    padding: 12px 24px;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.btn-primary:hover {
+    background: #1e3a7a;
+}
+
+.btn-danger {
+    background: var(--accent-color);
+    color: #fff;
+    border: none;
+    padding: 8px 16px;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 600;
+    cursor: pointer;
+    transition: opacity 0.2s;
+}
+
+.btn-danger:hover {
+    opacity: 0.9;
+}
+
+/* Room Blocks Tab */
+.room-blocks-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 20px;
+    margin-bottom: 40px;
+}
+
+.room-block-card {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+    display: flex;
+    flex-direction: column;
+    border-top: 4px solid var(--primary-color);
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    text-align: left;
+}
+
+.room-block-card:hover {
+    transform: translateY(-4px);
+    box-shadow: var(--shadow-hover);
+}
+
+.room-block-card.registered {
+    border-top-color: var(--secondary-color);
+    background: #f7faf5;
+}
+
+.room-block-name {
+    font-size: 1.25rem;
+    font-weight: 700;
+    margin-bottom: 12px;
+    color: var(--text-color);
+}
+
+.room-block-blurb {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    margin-bottom: 16px;
+    flex-grow: 1;
+    line-height: 1.5;
+}
+
+.room-block-stats {
+    background: rgba(0, 0, 0, 0.03);
+    border-radius: 8px;
+    padding: 12px;
+    margin-bottom: 16px;
+    font-size: 0.9rem;
+}
+
+.room-block-stat-row {
+    display: flex;
+    justify-content: space-between;
+    margin-bottom: 6px;
+}
+
+.room-block-stat-row:last-child {
+    margin-bottom: 0;
+}
+
+.room-block-actions {
+    display: flex;
+    gap: 10px;
+}
+
+.room-block-badge {
+    position: absolute;
+    top: 12px;
+    right: 12px;
+    padding: 4px 8px;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 700;
+}
+
+.room-block-badge.reg {
+    background: #d4edda;
+    color: #155724;
+}
+
+.room-block-badge.wl {
+    background: #fff3cd;
+    color: #856404;
+}
+
+/* T-Shirt Size Warning Box */
+.warning-box {
+    background: #fff8e1;
+    border-left: 4px solid #ffe082;
+    border-radius: 4px;
+    padding: 16px;
+    margin: 20px auto 30px;
+    max-width: 600px;
+    text-align: left;
+}
+
+.warning-box p {
+    margin: 0;
+    font-size: 0.95rem;
+    color: #856404;
+    line-height: 1.5;
+}
+
+/* User Submissions List */
+.submissions-list {
+    max-width: 800px;
+    margin: 30px auto 0;
+}
+
+.submission-item {
+    background: var(--card-bg);
+    border-radius: 8px;
+    box-shadow: var(--shadow);
+    padding: 20px;
+    margin-bottom: 16px;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    text-align: left;
+}
+
+.submission-details h4 {
+    font-size: 1.1rem;
+    margin-bottom: 6px;
+    color: var(--text-color);
+}
+
+.submission-details p {
+    font-size: 0.95rem;
+    color: var(--text-light);
+    line-height: 1.4;
+}
+
+/* Admin Dashboard Tables */
+.admin-table-container {
+    background: var(--card-bg);
+    border-radius: 12px;
+    box-shadow: var(--shadow);
+    padding: 24px;
+    margin-bottom: 40px;
+    overflow-x: auto;
+}
+
+.admin-table-container h3 {
+    margin-bottom: 20px;
+    color: var(--primary-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.admin-table {
+    width: 100%;
+    border-collapse: collapse;
+    text-align: left;
+}
+
+.admin-table th, 
+.admin-table td {
+    padding: 12px 15px;
+    border-bottom: 1px solid var(--border-color);
+}
+
+.admin-table th {
+    background: #f8fafc;
+    font-weight: 600;
+    color: var(--text-color);
+}
+
+.admin-table tr:hover {
+    background: #f8fafc;
+}
+
+/* Schedule Blurb styles */
+.room-header {
+    flex-direction: column;
+}
+
+.room-blurb-text {
+    font-size: 0.8rem;
+    color: var(--text-light);
+    font-weight: normal;
+    display: block;
+    margin-top: 4px;
+    line-height: 1.3;
+    padding: 0 4px;
+}
+

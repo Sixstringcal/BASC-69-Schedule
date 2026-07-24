@@ -1,5 +1,9 @@
 // API Configuration
 const API_URL = 'https://api.worldcubeassociation.org/competitions/BayAreaSpeedcubin692026/wcif/public';
+const BACKEND_API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+    ? 'http://localhost:3000'
+    : 'https://basc69-schedule-backend-d86998e8386e.herokuapp.com';
+
 
 // Event name mapping
 const EVENT_NAMES = {
@@ -47,12 +51,15 @@ let wcifData = null;
 let customInfo = null;
 let selectedDay = 0;
 let visibleRooms = new Set();
+let roomBlocks = [];
+
 
 // Initialize the application
 async function init() {
     try {
         wcifData = await fetchWCIFData();
         customInfo = await fetchCustomInfo();
+        await fetchRoomBlocks(); // Fetch room blocks blurbs
         renderCompetitionInfo();
         renderInfoCards();
         renderDayTabs();
@@ -66,9 +73,22 @@ async function init() {
     }
 }
 
+// Fetch room blocks from database
+async function fetchRoomBlocks() {
+    try {
+        const response = await fetch(`${BACKEND_API_BASE_URL}/api/room-blocks/public`);
+        if (response.ok) {
+            const data = await response.json();
+            roomBlocks = data.roomBlocks || [];
+        }
+    } catch (error) {
+        console.warn('Failed to fetch room blocks blurbs:', error);
+    }
+}
+
 // Fetch WCIF data from API
 async function fetchWCIFData() {
-    const response = await fetch(API_URL);
+    const response = await fetch(`${API_URL}?t=${Date.now()}`, { cache: 'no-store' });
     if (!response.ok) {
         throw new Error('Failed to fetch competition data');
     }
@@ -79,7 +99,7 @@ async function fetchWCIFData() {
 async function fetchCustomInfo() {
     try {
         console.log('Attempting to fetch custom-info.json...');
-        const response = await fetch('custom-info.json');
+        const response = await fetch(`custom-info.json?t=${Date.now()}`, { cache: 'no-store' });
         if (!response.ok) {
             console.warn('Custom info file not found, using defaults');
             return { activityInfo: {}, globalSettings: {} };
@@ -217,7 +237,7 @@ function renderSchedule(dayIndex) {
     
     venue.rooms.forEach(room => {
         if (!visibleRooms.has(room.id)) return;
-        const dayActivities = room.activities.filter(activity => {
+        let dayActivities = room.activities.filter(activity => {
             const activityStart = new Date(activity.startTime);
             
             // Get the date of this activity in the venue's local timezone
@@ -230,6 +250,35 @@ function renderSchedule(dayIndex) {
             
             return activityDateStr === targetDateStr;
         });
+
+        // Override FMC Duel time to 12:55 PM - 3:00 PM on Aug 30th (after lunch)
+        dayActivities = dayActivities.map(act => {
+            if (act.name.includes("FMC Duel")) {
+                return {
+                    ...act,
+                    startTime: "2026-08-30T19:55:00Z",
+                    endTime: "2026-08-30T22:00:00Z"
+                };
+            }
+            return act;
+        });
+
+        // Specific room mapping for Stephens Lounge
+        if (room.name.toLowerCase().includes('stephen')) {
+            const processed = [];
+            dayActivities.forEach(act => {
+                if (act.name.includes("Steven's Block 1") || act.name.includes("Stephens Block 1")) {
+                    // Map to Chess Tournament for full block on Aug 29th (9:00 AM - 12:30 PM)
+                    processed.push({
+                        ...act,
+                        name: "Chess Tournament"
+                    });
+                } else {
+                    processed.push(act);
+                }
+            });
+            dayActivities = processed;
+        }
         
         if (dayActivities.length > 0) {
             roomActivities[room.id] = {
@@ -305,9 +354,19 @@ function renderSchedule(dayIndex) {
         // Room header
         const roomHeader = document.createElement('div');
         roomHeader.className = 'room-header';
+        
+        // Find matching room block from database to show its blurb
+        const matchedBlock = roomBlocks.find(b => b.name.toLowerCase() === room.name.toLowerCase());
+        const blurbHtml = matchedBlock && matchedBlock.blurb 
+            ? `<div class="room-blurb-text">${matchedBlock.blurb}</div>`
+            : '';
+            
         roomHeader.innerHTML = `
-            <div class="room-header-color" style="background-color: ${room.color};"></div>
-            <span>${room.name}</span>
+            <div style="display: flex; align-items: center; justify-content: center; gap: 8px; width: 100%;">
+                <div class="room-header-color" style="background-color: ${room.color};"></div>
+                <span>${room.name}</span>
+            </div>
+            ${blurbHtml}
         `;
         roomColumn.appendChild(roomHeader);
         
@@ -327,6 +386,7 @@ function renderSchedule(dayIndex) {
         roomContent.appendChild(timeGrid);
         
         // Position activities
+        const layoutInfo = calculateActivityColumns(activities);
         activities.forEach(activity => {
             const actStart = new Date(activity.startTime);
             const actEnd = new Date(activity.endTime);
@@ -338,6 +398,10 @@ function renderSchedule(dayIndex) {
             const top = (offsetMinutes / 30) * slotHeight;
             const height = (durationMinutes / 30) * slotHeight;
             
+            const layout = layoutInfo.get(activity) || { colIndex: 0, maxCols: 1 };
+            const widthPercent = 100 / layout.maxCols;
+            const leftPercent = layout.colIndex * widthPercent;
+
             const activityBlock = document.createElement('div');
             activityBlock.className = 'activity-block';
             
@@ -348,6 +412,8 @@ function renderSchedule(dayIndex) {
             
             activityBlock.style.top = `${top}px`;
             activityBlock.style.height = `${height - 2}px`;
+            activityBlock.style.left = `calc(${leftPercent}% + 2px)`;
+            activityBlock.style.width = `calc(${widthPercent}% - 4px)`;
             activityBlock.style.borderLeftColor = room.color;
             
             const activityName = formatActivityName(activity.name, activity.activityCode);
@@ -369,10 +435,14 @@ function renderSchedule(dayIndex) {
                 });
             }
             
-            // Add click/tap to expand for mobile and short events
+            // Add click/tap handler for card (opens modal if info exists, otherwise toggles expand)
             activityBlock.addEventListener('click', (e) => {
                 e.stopPropagation();
-                activityBlock.classList.toggle('expanded');
+                if (showInfoBtn) {
+                    showActivityInfo(activityName, activity.activityCode);
+                } else {
+                    activityBlock.classList.toggle('expanded');
+                }
             });
             
             roomContent.appendChild(activityBlock);
@@ -629,9 +699,55 @@ function formatTime(date, timezone) {
     return date.toLocaleTimeString('en-US', opts);
 }
 
+function calculateActivityColumns(activities) {
+    const sorted = [...activities].sort((a, b) => new Date(a.startTime) - new Date(b.startTime));
+    const layoutInfo = new Map();
+    const columns = [];
+
+    sorted.forEach(act => {
+        const start = new Date(act.startTime).getTime();
+        let placed = false;
+        for (let i = 0; i < columns.length; i++) {
+            const lastInCol = columns[i][columns[i].length - 1];
+            if (new Date(lastInCol.endTime).getTime() <= start) {
+                columns[i].push(act);
+                layoutInfo.set(act, { colIndex: i });
+                placed = true;
+                break;
+            }
+        }
+        if (!placed) {
+            columns.push([act]);
+            layoutInfo.set(act, { colIndex: columns.length - 1 });
+        }
+    });
+
+    sorted.forEach(act1 => {
+        const start1 = new Date(act1.startTime).getTime();
+        const end1 = new Date(act1.endTime).getTime();
+        let maxCols = 1;
+        sorted.forEach(act2 => {
+            const start2 = new Date(act2.startTime).getTime();
+            const end2 = new Date(act2.endTime).getTime();
+            if (start1 < end2 && end1 > start2) {
+                const info2 = layoutInfo.get(act2);
+                if (info2 && info2.colIndex + 1 > maxCols) {
+                    maxCols = info2.colIndex + 1;
+                }
+            }
+        });
+        const info1 = layoutInfo.get(act1);
+        if (info1) {
+            info1.maxCols = Math.max(info1.maxCols || 1, maxCols);
+        }
+    });
+
+    return layoutInfo;
+}
+
 function formatActivityName(name, code) {
     // If it's a standard event round, use the event name
-    if (code.includes('-r')) {
+    if (code && code.includes('-r')) {
         const eventId = code.split('-')[0];
         const eventName = EVENT_NAMES[eventId];
         if (eventName) {
