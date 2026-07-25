@@ -138,6 +138,11 @@ export function findActivityById(wcif: WCIF, activityId: number): ActivityInfo |
 }
 
 export async function getPersonByWcaUserId(wcif: WCIF, wcaUserId: string, db: Pool): Promise<Person | null> {
+    // 1. Primary lookup: Match directly by wcaUserId in WCIF persons list
+    const personByUserId = wcif.persons.find(p => p.wcaUserId && String(p.wcaUserId) === String(wcaUserId));
+    if (personByUserId) return personByUserId;
+
+    // 2. Fallback: Query wca_id from database if available
     const [rows] = await db.query<any[]>(
         'SELECT wca_id FROM oauth_tokens WHERE wca_user_id = ?',
         [wcaUserId]
@@ -146,8 +151,10 @@ export async function getPersonByWcaUserId(wcif: WCIF, wcaUserId: string, db: Po
     if (rows.length === 0) return null;
     
     const wcaId = rows[0].wca_id;
-    const person = wcif.persons.find(p => p.wcaId === wcaId);
-    return person || null;
+    if (!wcaId) return null; // Never search by null/empty wcaId
+
+    const personByWcaId = wcif.persons.find(p => p.wcaId === wcaId);
+    return personByWcaId || null;
 }
 
 export function invalidateWCIFCache(): void {

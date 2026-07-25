@@ -48,7 +48,7 @@ async function checkAuthStatus() {
         const data = await response.json();
         console.log('Auth response:', data);
         
-        if (data.authenticated) {
+        if (response.ok && data.authenticated) {
             currentUser = data.user;
             console.log('User authenticated:', currentUser);
             
@@ -64,10 +64,18 @@ async function checkAuthStatus() {
                 document.getElementById('adminTabBtn').style.display = 'block';
             }
         } else {
-            console.log('User not authenticated');
+            console.log('User not authenticated - clearing local session token');
+            localStorage.removeItem('wca_auth_token');
+            currentUser = null;
+            isDelegate = false;
+            const adminTabBtn = document.getElementById('adminTabBtn');
+            if (adminTabBtn) adminTabBtn.style.display = 'none';
         }
     } catch (error) {
         console.error('Auth check error:', error);
+        localStorage.removeItem('wca_auth_token');
+        currentUser = null;
+        isDelegate = false;
     }
 }
 

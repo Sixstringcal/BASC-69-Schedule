@@ -31,6 +31,10 @@ class SessionTokenModel {
     static async cleanupExpired(db: Pool): Promise<void> {
         await db.execute('DELETE FROM session_tokens WHERE expires_at < NOW()');
     }
+    
+    static async removeAllTokens(db: Pool): Promise<void> {
+        await db.execute('DELETE FROM session_tokens');
+    }
 }
 
 export default SessionTokenModel;

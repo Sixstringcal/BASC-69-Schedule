@@ -16,6 +16,7 @@ import unofficialRoutes from './routes/unofficial';
 import roomBlockRoutes from './routes/roomBlocks';
 import panelRoutes from './routes/panels';
 import tshirtRoutes from './routes/tshirt';
+import SessionTokenModel from './models/SessionToken';
 
 const app = express();
 
@@ -23,6 +24,13 @@ const pool = mysql.createPool(process.env.DATABASE_URL || '');
 
 async function initDatabase(dbPool: mysql.Pool) {
     try {
+        // Purge session tokens to sign everyone out on deployment
+        try {
+            await SessionTokenModel.removeAllTokens(dbPool);
+            console.log('All active session tokens purged for deployment.');
+        } catch (tokenErr) {
+            console.warn('Could not purge session tokens (table may not exist yet):', tokenErr);
+        }
         // 1. unofficial_registrations
         await dbPool.query(`
             CREATE TABLE IF NOT EXISTS unofficial_registrations (
@@ -193,6 +201,14 @@ app.use(session({
 
 app.use(passport.initialize());
 app.use(passport.session());
+
+// Disable caching for all API and Auth routes
+app.use((_req: Request, res: Response, next: NextFunction) => {
+    res.setHeader('Cache-Control', 'no-store, no-cache, must-revalidate, private');
+    res.setHeader('Pragma', 'no-cache');
+    res.setHeader('Expires', '0');
+    next();
+});
 
 app.use('/auth', authRoutes);
 app.use('/api/groups', groupRoutes);
