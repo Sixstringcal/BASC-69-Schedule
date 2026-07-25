@@ -135,14 +135,14 @@ async function loadGroupSelection() {
         content.innerHTML = `
             <div class="message-box">
                 <h3>Login Required</h3>
-                <p>Please log in with your WCA account to select groups.</p>
+                <p>Please log in with your WCA account to select time slots.</p>
                 <a href="${API_BASE_URL}/auth/wca" class="login-btn">Login with WCA</a>
             </div>
         `;
         return;
     }
 
-    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading available groups...</p></div>';
+    content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading available time slots...</p></div>';
 
     try {
         const token = localStorage.getItem('wca_auth_token');
@@ -208,8 +208,8 @@ function renderGroupSelection(data, unofficialData) {
         if (unofficialEvents.length === 0) {
             content.innerHTML = `
                 <div class="message-box">
-                    <h3>No Groups Available</h3>
-                    <p>Either you're not registered for any events with group selection, or groups haven't been configured yet.</p>
+                    <h3>No Time Slots Available</h3>
+                    <p>Either you're not registered for any events with time slot selection, or time slots haven't been configured yet.</p>
                 </div>
             `;
             return;
@@ -221,7 +221,7 @@ function renderGroupSelection(data, unofficialData) {
     html += `
         <div class="competitor-info">
             <h3>Welcome, ${data.person.name}!</h3>
-            <p>Select your competing groups for the events you're registered for.</p>
+            <p>Select your time slots for the events you're registered for.</p>
         </div>
         <div class="groups-list">
     `;
@@ -248,7 +248,7 @@ function renderGroupSelection(data, unofficialData) {
             html += `
                 <div class="group-option ${statusClass}" data-activity-id="${group.activityId}" data-group-number="${group.groupNumber}">
                     <div class="group-header">
-                        <span class="group-number">Group ${group.groupNumber}</span>
+                        <span class="group-number">Time Slot ${group.groupNumber}</span>
                         <span class="group-capacity ${isFull ? 'full' : ''}">${group.currentCount}/${group.maxCapacity}</span>
                     </div>
                     <div class="group-time">
@@ -298,7 +298,7 @@ async function selectGroup(activityId, groupNumber) {
         }
         
         // Show success message
-        showNotification('Group selected successfully!', 'success');
+        showNotification('Time slot selected successfully!', 'success');
         
         // Reload groups to show updated state
         await loadGroupSelection();
@@ -377,7 +377,7 @@ async function deselectGroup(activityId) {
             throw new Error(data.error || 'Failed to deselect group');
         }
 
-        showNotification('Group selection removed.', 'success');
+        showNotification('Time slot selection removed.', 'success');
         await loadGroupSelection();
 
     } catch (error) {
@@ -454,16 +454,16 @@ function renderAdminPanel(data) {
 
     let html = `
         <div class="admin-header">
-            <h3>Group Selections</h3>
+            <h3>Time Slot Selections</h3>
             <p>Total selections: ${data.totalSelections}</p>
-            <button class="write-wcif-btn" onclick="acceptGroupSelections()">Accept Group Selections</button>
+            <button class="write-wcif-btn" onclick="acceptGroupSelections()">Accept Time Slot Selections</button>
             <button class="clear-selections-btn" onclick="clearSelections()">Clear All Selections</button>
         </div>
         <div class="admin-groups-list">
     `;
 
     if (data.activities.length === 0) {
-        html += '<p>No group selections yet.</p>';
+        html += '<p>No time slot selections yet.</p>';
     } else {
         for (const activity of data.activities) {
             html += `
@@ -476,7 +476,7 @@ function renderAdminPanel(data) {
                 html += `
                     <div class="admin-group">
                         <div class="admin-group-header">
-                            <strong>Group ${group.groupNumber}</strong>
+                            <strong>Time Slot ${group.groupNumber}</strong>
                             <span class="group-count">${group.count} competitors</span>
                         </div>
                         <div class="admin-competitors">
