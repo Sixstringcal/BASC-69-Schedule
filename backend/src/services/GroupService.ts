@@ -80,13 +80,21 @@ class GroupService {
                 .map(a => a.activityId)
         );
 
-        const selections = await GroupSelectionModel.findByRegistrantId(db, person.registrantId!);
+        const selections = await GroupSelectionModel.findByWcaUserId(db, wcaUserId);
         const userSelections: Record<number, number> = {};
         const acceptedActivityIds = new Set<number>();
         selections.forEach(sel => {
             userSelections[sel.activityId] = sel.groupNumber;
             if (sel.accepted) acceptedActivityIds.add(sel.activityId);
         });
+
+        // Auto-heal: If registrantId in DB differed due to past lookup bug, update DB to correct registrantId
+        if (person.registrantId) {
+            await db.query(
+                'UPDATE group_selections SET registrant_id = ? WHERE wca_user_id = ? AND registrant_id != ?',
+                [person.registrantId, wcaUserId, person.registrantId]
+            );
+        }
 
         // How many pending selections exist per group
         const [groupCounts] = await db.query<any[]>(

@@ -17,20 +17,73 @@ import roomBlockRoutes from './routes/roomBlocks';
 import panelRoutes from './routes/panels';
 import tshirtRoutes from './routes/tshirt';
 import SessionTokenModel from './models/SessionToken';
+import { getWCIF } from './utils/wcif';
 
 const app = express();
 
 const pool = mysql.createPool(process.env.DATABASE_URL || '');
 
+async function autoHealGroupSelections(dbPool: mysql.Pool) {
+    try {
+        const wcif = await getWCIF();
+        if (!wcif || !wcif.persons || wcif.persons.length === 0) {
+            return;
+        }
+
+        const userIdToRegistrantIdMap = new Map<string, number>();
+        const wcaIdToRegistrantIdMap = new Map<string, number>();
+
+        for (const person of wcif.persons) {
+            if (person.registrantId !== null && person.registrantId !== undefined) {
+                if (person.wcaUserId) {
+                    userIdToRegistrantIdMap.set(String(person.wcaUserId), person.registrantId);
+                }
+                if (person.wcaId) {
+                    wcaIdToRegistrantIdMap.set(person.wcaId, person.registrantId);
+                }
+            }
+        }
+
+        const [rows] = await dbPool.query<any[]>('SELECT DISTINCT wca_user_id FROM group_selections');
+        let updatedCount = 0;
+
+        for (const row of rows) {
+            const wcaUserId = String(row.wca_user_id);
+            let correctRegistrantId = userIdToRegistrantIdMap.get(wcaUserId);
+
+            if (!correctRegistrantId) {
+                const [tokenRows] = await dbPool.query<any[]>(
+                    'SELECT wca_id FROM oauth_tokens WHERE wca_user_id = ?',
+                    [wcaUserId]
+                );
+                if (tokenRows.length > 0 && tokenRows[0].wca_id) {
+                    correctRegistrantId = wcaIdToRegistrantIdMap.get(tokenRows[0].wca_id);
+                }
+            }
+
+            if (correctRegistrantId) {
+                const [result]: any = await dbPool.query(
+                    'UPDATE group_selections SET registrant_id = ? WHERE wca_user_id = ? AND registrant_id != ?',
+                    [correctRegistrantId, wcaUserId, correctRegistrantId]
+                );
+                if (result.affectedRows > 0) {
+                    updatedCount += result.affectedRows;
+                }
+            }
+        }
+
+        if (updatedCount > 0) {
+            console.log(`Auto-healed ${updatedCount} group_selections records with correct registrant IDs.`);
+        } else {
+            console.log('Group selections verified: all registrant IDs are correct.');
+        }
+    } catch (err) {
+        console.error('Error auto-healing group selections on startup:', err);
+    }
+}
+
 async function initDatabase(dbPool: mysql.Pool) {
     try {
-        // Purge session tokens to sign everyone out on deployment
-        try {
-            await SessionTokenModel.removeAllTokens(dbPool);
-            console.log('All active session tokens purged for deployment.');
-        } catch (tokenErr) {
-            console.warn('Could not purge session tokens (table may not exist yet):', tokenErr);
-        }
         // 1. unofficial_registrations
         await dbPool.query(`
             CREATE TABLE IF NOT EXISTS unofficial_registrations (
@@ -97,6 +150,9 @@ async function initDatabase(dbPool: mysql.Pool) {
 
         // Sync room blocks with JSON configuration file
         await syncRoomBlocksWithJson(dbPool);
+        
+        // Auto-heal group_selections records with correct registrant IDs
+        await autoHealGroupSelections(dbPool);
         
         console.log('Database tables initialized and verified.');
     } catch (err) {

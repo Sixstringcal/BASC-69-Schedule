@@ -24,6 +24,14 @@ export interface GroupSelectionWithCompetitor extends GroupSelectionRow {
 }
 
 class GroupSelectionModel {
+    static async findByWcaUserId(db: Pool, wcaUserId: string): Promise<GroupSelectionRow[]> {
+        const [rows] = await db.query<any[]>(
+            'SELECT registrant_id as registrantId, wca_user_id as wcaUserId, activity_id as activityId, activity_name as activityName, group_number as groupNumber, accepted, selected_at as selectedAt FROM group_selections WHERE wca_user_id = ?',
+            [wcaUserId]
+        );
+        return rows;
+    }
+
     static async findByRegistrantId(db: Pool, registrantId: number): Promise<GroupSelectionRow[]> {
         const [rows] = await db.query<any[]>(
             'SELECT registrant_id as registrantId, wca_user_id as wcaUserId, activity_id as activityId, activity_name as activityName, group_number as groupNumber, accepted, selected_at as selectedAt FROM group_selections WHERE registrant_id = ?',
@@ -52,7 +60,7 @@ class GroupSelectionModel {
         await db.query(
             `INSERT INTO group_selections (registrant_id, wca_user_id, activity_id, activity_name, group_number)
              VALUES (?, ?, ?, ?, ?)
-             ON DUPLICATE KEY UPDATE group_number = VALUES(group_number), accepted = 0, selected_at = CURRENT_TIMESTAMP`,
+             ON DUPLICATE KEY UPDATE group_number = VALUES(group_number), registrant_id = VALUES(registrant_id), accepted = 0, selected_at = CURRENT_TIMESTAMP`,
             [data.registrantId, data.wcaUserId, data.activityId, data.activityName, data.groupNumber]
         );
     }
