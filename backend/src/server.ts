@@ -62,20 +62,24 @@ async function autoHealGroupSelections(dbPool: mysql.Pool) {
             }
 
             if (correctRegistrantId) {
-                const [result]: any = await dbPool.query(
-                    'UPDATE group_selections SET registrant_id = ? WHERE wca_user_id = ? AND registrant_id != ?',
+                const [resultGroup]: any = await dbPool.query(
+                    'UPDATE group_selections SET registrant_id = ? WHERE wca_user_id = ? AND (registrant_id != ? OR registrant_id IS NULL)',
                     [correctRegistrantId, wcaUserId, correctRegistrantId]
                 );
-                if (result.affectedRows > 0) {
-                    updatedCount += result.affectedRows;
+                const [resultUnofficial]: any = await dbPool.query(
+                    'UPDATE unofficial_registrations SET registrant_id = ? WHERE wca_user_id = ? AND (registrant_id != ? OR registrant_id IS NULL)',
+                    [correctRegistrantId, wcaUserId, correctRegistrantId]
+                );
+                if (resultGroup.affectedRows > 0 || resultUnofficial.affectedRows > 0) {
+                    updatedCount += (resultGroup.affectedRows + resultUnofficial.affectedRows);
                 }
             }
         }
 
         if (updatedCount > 0) {
-            console.log(`Auto-healed ${updatedCount} group_selections records with correct registrant IDs.`);
+            console.log(`Auto-healed ${updatedCount} registration records with correct registrant IDs.`);
         } else {
-            console.log('Group selections verified: all registrant IDs are correct.');
+            console.log('Registration records verified: all registrant IDs are correct.');
         }
     } catch (err) {
         console.error('Error auto-healing group selections on startup:', err);
