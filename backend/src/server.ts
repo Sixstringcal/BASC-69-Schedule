@@ -31,20 +31,30 @@ async function autoHealGroupSelections(dbPool: mysql.Pool) {
         }
 
         const userIdToRegistrantIdMap = new Map<string, number>();
+        const emailToRegistrantIdMap = new Map<string, number>();
         const wcaIdToRegistrantIdMap = new Map<string, number>();
+        const nameToRegistrantIdMap = new Map<string, number>();
 
         for (const person of wcif.persons) {
             if (person.registrantId !== null && person.registrantId !== undefined) {
                 if (person.wcaUserId) {
                     userIdToRegistrantIdMap.set(String(person.wcaUserId), person.registrantId);
                 }
-                if (person.wcaId) {
+                if (person.email && person.email.trim() !== '') {
+                    emailToRegistrantIdMap.set(person.email.trim().toLowerCase(), person.registrantId);
+                }
+                if (person.wcaId && person.wcaId.trim() !== '') {
                     wcaIdToRegistrantIdMap.set(person.wcaId, person.registrantId);
+                }
+                if (person.name && person.name.trim() !== '') {
+                    nameToRegistrantIdMap.set(person.name.trim().toLowerCase(), person.registrantId);
                 }
             }
         }
 
-        const [rows] = await dbPool.query<any[]>('SELECT DISTINCT wca_user_id FROM group_selections');
+        const [rows] = await dbPool.query<any[]>(
+            'SELECT DISTINCT wca_user_id FROM (SELECT wca_user_id FROM group_selections UNION SELECT wca_user_id FROM unofficial_registrations) AS all_users'
+        );
         let updatedCount = 0;
 
         for (const row of rows) {
@@ -53,11 +63,19 @@ async function autoHealGroupSelections(dbPool: mysql.Pool) {
 
             if (!correctRegistrantId) {
                 const [tokenRows] = await dbPool.query<any[]>(
-                    'SELECT wca_id FROM oauth_tokens WHERE wca_user_id = ?',
+                    'SELECT wca_id, email, name FROM oauth_tokens WHERE wca_user_id = ?',
                     [wcaUserId]
                 );
-                if (tokenRows.length > 0 && tokenRows[0].wca_id) {
-                    correctRegistrantId = wcaIdToRegistrantIdMap.get(tokenRows[0].wca_id);
+                if (tokenRows.length > 0) {
+                    if (tokenRows[0].email && tokenRows[0].email.trim() !== '') {
+                        correctRegistrantId = emailToRegistrantIdMap.get(tokenRows[0].email.trim().toLowerCase());
+                    }
+                    if (!correctRegistrantId && tokenRows[0].wca_id && tokenRows[0].wca_id.trim() !== '') {
+                        correctRegistrantId = wcaIdToRegistrantIdMap.get(tokenRows[0].wca_id);
+                    }
+                    if (!correctRegistrantId && tokenRows[0].name && tokenRows[0].name.trim() !== '') {
+                        correctRegistrantId = nameToRegistrantIdMap.get(tokenRows[0].name.trim().toLowerCase());
+                    }
                 }
             }
 
@@ -88,6 +106,13 @@ async function autoHealGroupSelections(dbPool: mysql.Pool) {
 
 async function initDatabase(dbPool: mysql.Pool) {
     try {
+        // Ensure email column exists on oauth_tokens
+        try {
+            await dbPool.query('ALTER TABLE oauth_tokens ADD COLUMN email VARCHAR(255)');
+        } catch {
+            // Column already exists or error ignored
+        }
+
         // 1. unofficial_registrations
         await dbPool.query(`
             CREATE TABLE IF NOT EXISTS unofficial_registrations (

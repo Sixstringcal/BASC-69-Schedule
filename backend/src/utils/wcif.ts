@@ -142,19 +142,37 @@ export async function getPersonByWcaUserId(wcif: WCIF, wcaUserId: string, db: Po
     const personByUserId = wcif.persons.find(p => p.wcaUserId && String(p.wcaUserId) === String(wcaUserId));
     if (personByUserId) return personByUserId;
 
-    // 2. Fallback: Query wca_id from database if available
+    // 2. Query wca_id, email, and name from database if available
     const [rows] = await db.query<any[]>(
-        'SELECT wca_id FROM oauth_tokens WHERE wca_user_id = ?',
+        'SELECT wca_id, email, name FROM oauth_tokens WHERE wca_user_id = ?',
         [wcaUserId]
     );
     
     if (rows.length === 0) return null;
     
-    const wcaId = rows[0].wca_id;
-    if (!wcaId) return null; // Never search by null/empty wcaId
+    const userRow = rows[0];
 
-    const personByWcaId = wcif.persons.find(p => p.wcaId === wcaId);
-    return personByWcaId || null;
+    // 3. Fallback: Match by email (unique per competitor in WCIF)
+    if (userRow.email && typeof userRow.email === 'string' && userRow.email.trim() !== '') {
+        const targetEmail = userRow.email.trim().toLowerCase();
+        const personByEmail = wcif.persons.find(p => p.email && p.email.trim().toLowerCase() === targetEmail);
+        if (personByEmail) return personByEmail;
+    }
+
+    // 4. Fallback: Match by wca_id if available and non-empty
+    if (userRow.wca_id && typeof userRow.wca_id === 'string' && userRow.wca_id.trim() !== '') {
+        const personByWcaId = wcif.persons.find(p => p.wcaId === userRow.wca_id);
+        if (personByWcaId) return personByWcaId;
+    }
+
+    // 5. Fallback for first-time competitors: Match by exact name (case-insensitive)
+    if (userRow.name && typeof userRow.name === 'string' && userRow.name.trim() !== '') {
+        const targetName = userRow.name.trim().toLowerCase();
+        const personByName = wcif.persons.find(p => p.name && p.name.trim().toLowerCase() === targetName);
+        if (personByName) return personByName;
+    }
+
+    return null;
 }
 
 export function invalidateWCIFCache(): void {

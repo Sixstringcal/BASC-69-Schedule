@@ -1,11 +1,12 @@
 import { Pool } from 'mysql2/promise';
 import UserModel, { UserData, User } from '../models/User';
-import { getWCIF } from '../utils/wcif';
+import { getWCIF, getPersonByWcaUserId } from '../utils/wcif';
 
 interface OAuthUser {
     id: string;
     wca_id: string;
     name: string;
+    email?: string;
     accessToken: string;
     refreshToken?: string;
 }
@@ -23,6 +24,7 @@ class AuthService {
             wcaUserId: oauthUser.id,
             wcaId: oauthUser.wca_id,
             name: oauthUser.name,
+            email: oauthUser.email,
             accessToken: oauthUser.accessToken,
             refreshToken: oauthUser.refreshToken
         };
@@ -45,7 +47,7 @@ class AuthService {
         try {
             const wcif = await getWCIF(user.accessToken);
             
-            const person = wcif.persons.find(p => p.wcaId === user.wcaId);
+            const person = await getPersonByWcaUserId(wcif, wcaUserId, db);
             if (!person || !person.roles || !person.roles.includes('delegate')) {
                 return { isDelegate: false };
             }
