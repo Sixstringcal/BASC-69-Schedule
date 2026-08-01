@@ -949,11 +949,8 @@ function renderRoomBlocks(roomBlocks, userRegistration) {
         html += '</div>';
     }
     
-    html += '</div>';
     content.innerHTML = html;
 }
-
-const DISCLAIMER_MSG = "Competitors will be limited to registering for a maximum of one event per person, as we cannot accommodate everyone competing in everything. We ask that you consider if you would enjoy these slots more as a competitor or a spectator. If you don’t really play Smash Bros/Guitar Hero/Dance Dance Revolution, we encourage you to wait a week before registering to allow those who actually play these games to register, especially since you will be able to play these casually in the room outside of the competitive bracket.";
 
 function showSignupField(blockId, isFull) {
     const container = document.getElementById(`signup-container-${blockId}`);
@@ -977,7 +974,6 @@ function showSignupField(blockId, isFull) {
 }
 
 async function submitSignupDirect(blockId) {
-    if (!confirm(DISCLAIMER_MSG)) return;
     await executeRoomBlockRegister(blockId, userSharedEmail);
 }
 
@@ -995,8 +991,6 @@ async function submitSignup(blockId) {
         return;
     }
     
-    if (!confirm(DISCLAIMER_MSG)) return;
-    
     userSharedEmail = email; // Cache it
     await executeRoomBlockRegister(blockId, email);
 }
@@ -1004,8 +998,6 @@ async function submitSignup(blockId) {
 async function roomBlocksSwitch(roomBlockId, newBlockName, oldBlockName) {
     const switchConfirmed = confirm(`You are currently registered for '${oldBlockName}'. Switching will drop you from this block. Are you sure you want to proceed?`);
     if (!switchConfirmed) return;
-    
-    if (!confirm(DISCLAIMER_MSG)) return;
     
     const email = userSharedEmail;
     if (!email) {
