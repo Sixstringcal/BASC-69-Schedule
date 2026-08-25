@@ -18,7 +18,15 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
     }
 });
 
+import { FEATURE_FLAGS } from '../config/features';
+
 router.post('/select', isAuthenticated, async (req: Request, res: Response) => {
+    if (!FEATURE_FLAGS.IS_TIMESLOT_REGISTRATION_OPEN) {
+        return res.status(403).json({
+            error: `Competition is coming up soon! You cannot select time slots anymore. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+        });
+    }
+
     try {
         const db = req.app.locals.db;
         const wcaUserId = req.session.wcaUserId!;
@@ -47,6 +55,12 @@ router.post('/select', isAuthenticated, async (req: Request, res: Response) => {
 });
 
 router.delete('/select', isAuthenticated, async (req: Request, res: Response) => {
+    if (!FEATURE_FLAGS.IS_TIMESLOT_REGISTRATION_OPEN) {
+        return res.status(403).json({
+            error: `Competition is coming up soon! You cannot select time slots anymore. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+        });
+    }
+
     try {
         const db = req.app.locals.db;
         const wcaUserId = req.session.wcaUserId!;

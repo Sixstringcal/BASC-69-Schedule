@@ -3,6 +3,11 @@ const API_BASE_URL = window.location.hostname === 'localhost' || window.location
     ? 'http://localhost:3000'
     : 'https://basc69-schedule-backend-d86998e8386e.herokuapp.com';
 
+// Feature / Registration Settings (Set to false to re-enable signups for future competitions)
+const REGISTRATION_CLOSED = true;
+const PANELS_CLOSED = false;
+const DEADLINE_NOTICE_HTML = 'Competition is coming up soon! You cannot select time slots anymore. If you have a conflict, please contact Calvin Nielson at <a href="mailto:cnielson@worldcubeassociation.org">cnielson@worldcubeassociation.org</a>';
+
 // Global state
 let currentUser = null;
 let isDelegate = false;
@@ -191,21 +196,32 @@ function renderGroupSelection(data, unofficialData) {
 
     let html = '';
 
+    if (REGISTRATION_CLOSED) {
+        html += `
+            <div class="message-box warning" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; margin-bottom: 25px; line-height: 1.5;">
+                <p style="margin: 0; font-size: 1.05rem; font-weight: 600;">
+                    ${DEADLINE_NOTICE_HTML}
+                </p>
+            </div>
+        `;
+    }
+
     // Unofficial events section
     if (unofficialEvents.length > 0) {
         html += `
             <div class="unofficial-events-section">
                 <h3>Unofficial Events</h3>
-                <p>Click an event to sign up, or click again to remove your registration. For team events (Doubles, Team-Blind), only one person per team needs to register.</p>
+                <p>${REGISTRATION_CLOSED ? 'Registration for unofficial events is now closed.' : 'Click an event to sign up, or click again to remove your registration. For team events (Doubles, Team-Blind), only one person per team needs to register.'}</p>
                 <div class="unofficial-events-grid">
         `;
         for (const event of unofficialEvents) {
-            const fn = event.registered ? `unofficialUnregister('${event.id}')` : `unofficialRegister('${event.id}')`;
+            const fn = REGISTRATION_CLOSED ? '' : (event.registered ? `unofficialUnregister('${event.id}')` : `unofficialRegister('${event.id}')`);
+            const styleAttr = REGISTRATION_CLOSED ? 'style="cursor: default; opacity: 0.85;"' : '';
             html += `
-                <div class="unofficial-event-card ${event.registered ? 'registered' : ''}" onclick="${fn}">
+                <div class="unofficial-event-card ${event.registered ? 'registered' : ''}" ${fn ? `onclick="${fn}"` : ''} ${styleAttr}>
                     ${event.registered ? '<div class="unofficial-check">✓</div>' : ''}
                     <div class="unofficial-event-name">${event.name}</div>
-                    <div class="unofficial-event-status">${event.registered ? 'Registered' : 'Click to sign up'}</div>
+                    <div class="unofficial-event-status">${event.registered ? 'Registered' : (REGISTRATION_CLOSED ? 'Closed' : 'Click to sign up')}</div>
                 </div>
             `;
         }
@@ -214,7 +230,7 @@ function renderGroupSelection(data, unofficialData) {
 
     if (!data.availableGroups || data.availableGroups.length === 0) {
         if (unofficialEvents.length === 0) {
-            content.innerHTML = `
+            content.innerHTML = html + `
                 <div class="message-box">
                     <h3>No Time Slots Available</h3>
                     <p>Either you're not registered for any events with time slot selection, or time slots haven't been configured yet.</p>
@@ -229,7 +245,7 @@ function renderGroupSelection(data, unofficialData) {
     html += `
         <div class="competitor-info">
             <h3>Welcome, ${data.person.name}!</h3>
-            <p>Select your time slots for the events you're registered for.</p>
+            <p>${REGISTRATION_CLOSED ? 'Your time slot selections for registered events:' : 'Select your time slots for the events you\'re registered for.'}</p>
         </div>
         <div class="groups-list">
     `;
@@ -249,9 +265,17 @@ function renderGroupSelection(data, unofficialData) {
             const isAccepted = group.isAccepted;
             const isAssigned = group.isAssigned;
             const isFull = group.isFull;
-            const isLocked = isAssigned || isAccepted;
-            const canSelect = !isFull;
+            const isLocked = isAssigned || isAccepted || REGISTRATION_CLOSED;
+            const canSelect = !isFull && !REGISTRATION_CLOSED;
             const statusClass = isAssigned ? 'assigned' : (isAccepted ? 'accepted' : (isSelected ? 'selected' : (isFull ? 'full' : '')));
+
+            const btnText = isAccepted 
+                ? '✅ Accepted' 
+                : (isSelected 
+                    ? (REGISTRATION_CLOSED ? '✓ Selected' : '✓ Selected (click to remove)') 
+                    : (isAssigned 
+                        ? '📋 Assigned' 
+                        : (isFull ? 'Full' : (REGISTRATION_CLOSED ? 'Closed' : 'Select'))));
 
             html += `
                 <div class="group-option ${statusClass}" data-activity-id="${group.activityId}" data-group-number="${group.groupNumber}">
@@ -266,10 +290,11 @@ function renderGroupSelection(data, unofficialData) {
                     ${isAccepted ? '<div class="assigned-badge">✅ Accepted</div>' : ''}
                     <button class="select-group-btn"
                             ${(!canSelect && !isSelected) || isLocked ? 'disabled' : ''}
-                            onclick="${isSelected && !isLocked ? `deselectGroup(${group.activityId})` : `selectGroup(${group.activityId}, ${group.groupNumber})`}"
+                            ${!REGISTRATION_CLOSED && isSelected && !isLocked ? `onclick="deselectGroup(${group.activityId})"` : ''}
+                            ${!REGISTRATION_CLOSED && !isSelected && canSelect ? `onclick="selectGroup(${group.activityId}, ${group.groupNumber})"` : ''}
                             data-activity-id="${group.activityId}"
                             data-group-number="${group.groupNumber}">
-                        ${isAccepted ? '✅ Accepted' : (isSelected ? '✓ Selected (click to remove)' : (isFull ? 'Full' : 'Select'))}
+                        ${btnText}
                     </button>
                 </div>
             `;
@@ -1120,40 +1145,52 @@ function renderPanels(submissions) {
         userSharedEmail = currentUserRegistration.email;
     }
     
-    let emailFieldHtml = '';
-    if (!userSharedEmail) {
-        emailFieldHtml = `
-            <div class="form-group">
-                <label for="panel-email">Email Address</label>
-                <input type="email" id="panel-email" placeholder="your@email.com" required>
-                <span class="form-help">We collect your email so we can contact you to schedule your panel.</span>
+    let html = '';
+
+    if (PANELS_CLOSED) {
+        html += `
+            <div class="message-box warning" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; margin-bottom: 25px; line-height: 1.5;">
+                <p style="margin: 0; font-size: 1.05rem; font-weight: 600;">
+                    Competition is coming up soon! Panel submissions and edits are now closed. If you have a conflict, please contact Calvin Nielson at <a href="mailto:cnielson@worldcubeassociation.org">cnielson@worldcubeassociation.org</a>
+                </p>
             </div>
         `;
+    } else {
+        let emailFieldHtml = '';
+        if (!userSharedEmail) {
+            emailFieldHtml = `
+                <div class="form-group">
+                    <label for="panel-email">Email Address</label>
+                    <input type="email" id="panel-email" placeholder="your@email.com" required>
+                    <span class="form-help">We collect your email so we can contact you to schedule your panel.</span>
+                </div>
+            `;
+        }
+        
+        html += `
+            <form onsubmit="panelsSubmit(event)" class="custom-form">
+                <h3>Submit a Panel</h3>
+                <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.9rem;">
+                    Host a panel or presentation at the competition! Share your speedcubing knowledge, collection, or other fun ideas with the community.
+                </p>
+                <div class="form-group">
+                    <label for="panel-name">Panel Name</label>
+                    <input type="text" id="panel-name" placeholder="e.g. History of Rubik's Cube Mods" required>
+                </div>
+                <div class="form-group">
+                    <label for="panel-desc">Panel Description</label>
+                    <textarea id="panel-desc" rows="4" placeholder="Briefly describe what your panel is about and what you'll need." required></textarea>
+                </div>
+                ${emailFieldHtml}
+                <button type="submit" class="btn-primary">Submit Panel Proposal</button>
+            </form>
+        `;
     }
-    
-    let html = `
-        <form onsubmit="panelsSubmit(event)" class="custom-form">
-            <h3>Submit a Panel</h3>
-            <p style="color: var(--text-light); margin-bottom: 20px; font-size: 0.9rem;">
-                Host a panel or presentation at the competition! Share your speedcubing knowledge, collection, or other fun ideas with the community.
-            </p>
-            <div class="form-group">
-                <label for="panel-name">Panel Name</label>
-                <input type="text" id="panel-name" placeholder="e.g. History of Rubik's Cube Mods" required>
-            </div>
-            <div class="form-group">
-                <label for="panel-desc">Panel Description</label>
-                <textarea id="panel-desc" rows="4" placeholder="Briefly describe what your panel is about and what you'll need." required></textarea>
-            </div>
-            ${emailFieldHtml}
-            <button type="submit" class="btn-primary">Submit Panel Proposal</button>
-        </form>
-    `;
     
     html += '<div class="submissions-list">';
     html += '<h3>Your Submissions</h3>';
     
-    if (submissions.length === 0) {
+    if (!submissions || submissions.length === 0) {
         html += '<p style="color: var(--text-light); margin-top: 15px;">You have not submitted any panels yet.</p>';
     } else {
         for (const sub of submissions) {
@@ -1166,7 +1203,7 @@ function renderPanels(submissions) {
                             Submitted at: ${new Date(sub.submittedAt).toLocaleDateString()} | Contact: ${sub.email}
                         </small>
                     </div>
-                    <button class="btn-danger" onclick="panelsDelete(${sub.id})">Delete</button>
+                    ${PANELS_CLOSED ? '' : `<button class="btn-danger" onclick="panelsDelete(${sub.id})">Delete</button>`}
                 </div>
             `;
         }

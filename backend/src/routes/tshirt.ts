@@ -17,7 +17,15 @@ router.get('/my-selection', isAuthenticated, async (req: Request, res: Response)
     }
 });
 
+import { FEATURE_FLAGS } from '../config/features';
+
 router.post('/select', isAuthenticated, async (req: Request, res: Response) => {
+    if (!FEATURE_FLAGS.IS_TSHIRT_REGISTRATION_OPEN) {
+        return res.status(403).json({
+            error: `Competition is coming up soon! T-shirt size selections are now closed. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+        });
+    }
+
     try {
         const db = req.app.locals.db;
         const wcaUserId = parseInt((req as any).wcaUserId || req.session.wcaUserId);

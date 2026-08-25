@@ -17,7 +17,15 @@ router.get('/my-submissions', isAuthenticated, async (req: Request, res: Respons
     }
 });
 
+import { FEATURE_FLAGS } from '../config/features';
+
 router.post('/submit', isAuthenticated, async (req: Request, res: Response) => {
+    if (!FEATURE_FLAGS.IS_PANELS_REGISTRATION_OPEN) {
+        return res.status(403).json({
+            error: `Competition is coming up soon! Panel submissions are now closed. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+        });
+    }
+
     try {
         const db = req.app.locals.db;
         const wcaUserId = parseInt((req as any).wcaUserId || req.session.wcaUserId);
@@ -48,16 +56,14 @@ router.delete('/my-submissions/:id', isAuthenticated, async (req: Request, res: 
         const id = parseInt(req.params.id);
         
         // Admins can delete any, standard users can only delete their own
-        const isUserDelegate = (req as any).isDelegate || false; // Wait, let's verify if isDelegate middleware sets this, or we can check with verifyDelegate
-        // To be safe, just delete passing owner ID if not delegate. But wait! If we pass wcaUserId, the model checks it.
-        // Let's check delegate status in a try block, or just delegate check if needed.
-        // Actually, we can check req.session or call verifyDelegate. Let's look at `isDelegate` middleware in `backend/src/middleware/auth.ts`.
-        // In the middleware: `(req as any).accessToken = result.accessToken;` and it moves to next. It doesn't set `isDelegate` boolean on req.
-        // We can just query the model: if the user is standard, pass wcaUserId. If they are delegate, do not pass wcaUserId.
-        // Wait, how do we know if they are a delegate? We can check using `AuthService.verifyDelegate(db, wcaUserId)`.
-        // Let's do that!
         const { verifyDelegate } = require('../services/AuthService').default || require('../services/AuthService');
         const delegateCheck = await verifyDelegate(db, wcaUserId.toString());
+        
+        if (!delegateCheck.isDelegate && !FEATURE_FLAGS.IS_PANELS_REGISTRATION_OPEN) {
+            return res.status(403).json({
+                error: `Competition is coming up soon! Panel edits are now closed. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+            });
+        }
         
         if (delegateCheck.isDelegate) {
             await PanelSubmissionModel.delete(db, id);

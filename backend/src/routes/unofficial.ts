@@ -16,7 +16,15 @@ router.get('/', isAuthenticated, async (req: Request, res: Response) => {
     }
 });
 
+import { FEATURE_FLAGS } from '../config/features';
+
 router.post('/register', isAuthenticated, async (req: Request, res: Response) => {
+    if (!FEATURE_FLAGS.IS_UNOFFICIAL_REGISTRATION_OPEN) {
+        return res.status(403).json({
+            error: `Competition is coming up soon! You cannot register for unofficial events anymore. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+        });
+    }
+
     try {
         const db = req.app.locals.db;
         const wcaUserId = req.session.wcaUserId!;
@@ -36,6 +44,12 @@ router.post('/register', isAuthenticated, async (req: Request, res: Response) =>
 });
 
 router.delete('/register', isAuthenticated, async (req: Request, res: Response) => {
+    if (!FEATURE_FLAGS.IS_UNOFFICIAL_REGISTRATION_OPEN) {
+        return res.status(403).json({
+            error: `Competition is coming up soon! You cannot unregister from unofficial events anymore. If you have a conflict, please contact ${FEATURE_FLAGS.CONTACT_NAME} at ${FEATURE_FLAGS.CONTACT_EMAIL}`
+        });
+    }
+
     try {
         const db = req.app.locals.db;
         const wcaUserId = req.session.wcaUserId!;
