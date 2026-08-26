@@ -548,7 +548,7 @@ function renderAdminPanel(data) {
                     <ul>
             `;
             for (const c of event.competitors) {
-                html += `<li>${c.name} ${c.wcaId ? `(${c.wcaId})` : ''}</li>`;
+                html += `<li>${c.name} ${c.wcaId ? `(${c.wcaId})` : ''} - <strong>Group ${c.groupNumber || 1}</strong></li>`;
             }
             html += '</ul></div>';
         }
@@ -804,6 +804,7 @@ function exportUnofficialScorecards(eventId) {
                 name: c.name,
                 event_id: event.eventId,
                 event_name: event.eventName,
+                group_number: c.groupNumber != null ? c.groupNumber : 1,
                 format: event.format != null ? event.format : '',
                 time_limit: event.timeLimit != null ? event.timeLimit : '',
                 cutoff_attempts: event.cutoff != null ? event.cutoff.numberOfAttempts : '',
@@ -817,7 +818,7 @@ function exportUnofficialScorecards(eventId) {
         return;
     }
 
-    const headers = ['competition_name', 'registrant_id', 'wca_id', 'name', 'event_id', 'event_name', 'format', 'time_limit', 'cutoff_attempts', 'cutoff_time'];
+    const headers = ['competition_name', 'registrant_id', 'wca_id', 'name', 'event_id', 'event_name', 'group_number', 'format', 'time_limit', 'cutoff_attempts', 'cutoff_time'];
     const escape = val => '"' + String(val).replace(/"/g, '""') + '"';
     const lines = [headers.map(escape).join(',')];
     for (const row of rows) {

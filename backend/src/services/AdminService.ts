@@ -33,7 +33,7 @@ interface PendingGroupsResponse {
         timeLimit: number | null;
         cutoff: UnofficialEventCutoff | null;
         count: number;
-        competitors: Array<{ name: string; wcaId: string; registrantId: number | null }>;
+        competitors: Array<{ name: string; wcaId: string; registrantId: number | null; groupNumber: number }>;
     }>;
 }
 
@@ -90,9 +90,25 @@ class AdminService {
             }))
         }));
 
-        const unofficialRows = await UnofficialRegistrationModel.getAllWithCompetitors(db);
+        const [unofficialRows, allSelections] = await Promise.all([
+            UnofficialRegistrationModel.getAllWithCompetitors(db),
+            GroupSelectionModel.getAll(db)
+        ]);
+
+        const selectionMap = new Map<string, number>();
+        for (const sel of allSelections) {
+            if (sel.wcaUserId) {
+                selectionMap.set(`${sel.wcaUserId}_${sel.activityId}`, sel.groupNumber);
+            }
+            if (sel.registrantId) {
+                selectionMap.set(`reg_${sel.registrantId}_${sel.activityId}`, sel.groupNumber);
+            }
+        }
+
         const configEventMap = new Map((config.unofficialEvents || []).map(e => [e.id, e]));
+        const unofficialGroupSettings = config.unofficialGroupSettings || {};
         const unofficialByEvent: Record<string, any> = {};
+
         for (const row of unofficialRows) {
             if (!unofficialByEvent[row.eventId]) {
                 const eventConfig = configEventMap.get(row.eventId);
@@ -105,14 +121,34 @@ class AdminService {
                     competitors: []
                 };
             }
+
+            let groupNumber = 1;
+            const settings = unofficialGroupSettings[row.eventId];
+            if (settings && settings.groups) {
+                for (const gDef of settings.groups) {
+                    const byWca = selectionMap.get(`${row.wcaUserId}_${gDef.id}`);
+                    const byReg = row.registrantId ? selectionMap.get(`reg_${row.registrantId}_${gDef.id}`) : undefined;
+                    if (byWca !== undefined) {
+                        groupNumber = byWca;
+                        break;
+                    } else if (byReg !== undefined) {
+                        groupNumber = byReg;
+                        break;
+                    }
+                }
+            }
+
             unofficialByEvent[row.eventId].competitors.push({
                 name: row.competitorName,
                 wcaId: row.wcaId,
-                registrantId: row.registrantId
+                registrantId: row.registrantId,
+                groupNumber
             });
         }
+
         const unofficialRegistrations = Object.values(unofficialByEvent).map((e: any) => ({
             ...e,
+            competitors: e.competitors.sort((a: any, b: any) => a.groupNumber - b.groupNumber || a.name.localeCompare(b.name)),
             count: e.competitors.length
         }));
 
