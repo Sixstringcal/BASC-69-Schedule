@@ -20,14 +20,14 @@ async function initGroupSelection() {
     // Check if returning from OAuth login with token
     const urlParams = new URLSearchParams(window.location.search);
     const token = urlParams.get('token');
-    
+
     if (token) {
         // Store token in localStorage
         localStorage.setItem('wca_auth_token', token);
         // Clean up URL
         window.history.replaceState({}, document.title, window.location.pathname);
     }
-    
+
     await checkAuthStatus();
     setupTabNavigation();
     setupUserSection();
@@ -41,22 +41,22 @@ async function checkAuthStatus() {
         const headers = {
             'Content-Type': 'application/json'
         };
-        
+
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-        
+
         const response = await fetch(`${API_BASE_URL}/auth/me`, {
             credentials: 'include',
             headers
         });
         const data = await response.json();
         console.log('Auth response:', data);
-        
+
         if (response.ok && data.authenticated) {
             currentUser = data.user;
             console.log('User authenticated:', currentUser);
-            
+
             // Check if user is a delegate
             const delegateResponse = await fetch(`${API_BASE_URL}/api/admin/check`, {
                 credentials: 'include',
@@ -64,7 +64,7 @@ async function checkAuthStatus() {
             });
             const delegateData = await delegateResponse.json();
             isDelegate = delegateData.isDelegate || false;
-            
+
             if (isDelegate) {
                 document.getElementById('adminTabBtn').style.display = 'block';
             }
@@ -88,21 +88,21 @@ async function checkAuthStatus() {
 function setupTabNavigation() {
     const tabs = document.querySelectorAll('.nav-tab');
     const tabContents = document.querySelectorAll('.tab-content');
-    
+
     tabs.forEach(tab => {
         tab.addEventListener('click', () => {
             const tabName = tab.dataset.tab;
-            
+
             // Update active tab
             tabs.forEach(t => t.classList.remove('active'));
             tab.classList.add('active');
-            
+
             // Update active content
             tabContents.forEach(content => {
                 content.classList.remove('active');
             });
             document.getElementById(`${tabName}Tab`).classList.add('active');
-            
+
             // Load tab content
             if (tabName === 'groups') {
                 loadGroupSelection();
@@ -122,7 +122,7 @@ function setupTabNavigation() {
 // Setup user section in header
 function setupUserSection() {
     const userSection = document.getElementById('userSection');
-    
+
     if (currentUser) {
         userSection.innerHTML = `
             <div class="user-info">
@@ -249,7 +249,7 @@ function renderGroupSelection(data, unofficialData) {
         </div>
         <div class="groups-list">
     `;
-    
+
     for (const activity of data.availableGroups) {
         html += `
             <div class="activity-groups">
@@ -259,7 +259,7 @@ function renderGroupSelection(data, unofficialData) {
                 </div>
                 <div class="groups-grid">
         `;
-        
+
         for (const group of activity.groups) {
             const isSelected = group.isSelected;
             const isAccepted = group.isAccepted;
@@ -269,12 +269,12 @@ function renderGroupSelection(data, unofficialData) {
             const canSelect = !isFull && !REGISTRATION_CLOSED;
             const statusClass = isAssigned ? 'assigned' : (isAccepted ? 'accepted' : (isSelected ? 'selected' : (isFull ? 'full' : '')));
 
-            const btnText = isAccepted 
-                ? '✅ Accepted' 
-                : (isSelected 
-                    ? (REGISTRATION_CLOSED ? '✓ Selected' : '✓ Selected (click to remove)') 
-                    : (isAssigned 
-                        ? '📋 Assigned' 
+            const btnText = isAccepted
+                ? '✅ Accepted'
+                : (isSelected
+                    ? (REGISTRATION_CLOSED ? '✓ Selected' : '✓ Selected (click to remove)')
+                    : (isAssigned
+                        ? '📋 Assigned'
                         : (isFull ? 'Full' : (REGISTRATION_CLOSED ? 'Closed' : 'Select'))));
 
             html += `
@@ -299,13 +299,13 @@ function renderGroupSelection(data, unofficialData) {
                 </div>
             `;
         }
-        
+
         html += `
                 </div>
             </div>
         `;
     }
-    
+
     html += '</div>';
     content.innerHTML = html;
 }
@@ -316,26 +316,26 @@ async function selectGroup(activityId, groupNumber) {
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${API_BASE_URL}/api/groups/select`, {
             method: 'POST',
             headers,
             credentials: 'include',
             body: JSON.stringify({ activityId, groupNumber })
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Failed to select group');
         }
-        
+
         // Show success message
         showNotification('Time slot selected successfully!', 'success');
-        
+
         // Reload groups to show updated state
         await loadGroupSelection();
-        
+
     } catch (error) {
         console.error('Select group error:', error);
         showNotification(error.message, 'error');
@@ -422,7 +422,7 @@ async function deselectGroup(activityId) {
 // Load admin panel
 async function loadAdminPanel() {
     const content = document.getElementById('adminContent');
-    
+
     if (!isDelegate) {
         content.innerHTML = `
             <div class="message-box error">
@@ -432,14 +432,14 @@ async function loadAdminPanel() {
         `;
         return;
     }
-    
+
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading admin panel...</p></div>';
-    
+
     try {
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const [pendingRes, roomBlocksRes, roomBlocksRegsRes, panelsRes, tshirtRes] = await Promise.all([
             fetch(`${API_BASE_URL}/api/admin/pending-groups`, { credentials: 'include', headers }),
             fetch(`${API_BASE_URL}/api/room-blocks/public`, { credentials: 'include', headers }),
@@ -447,17 +447,17 @@ async function loadAdminPanel() {
             fetch(`${API_BASE_URL}/api/panels/admin/submissions`, { credentials: 'include', headers }),
             fetch(`${API_BASE_URL}/api/tshirt/admin/summary`, { credentials: 'include', headers })
         ]);
-        
+
         if (!pendingRes.ok || !roomBlocksRes.ok || !roomBlocksRegsRes.ok || !panelsRes.ok || !tshirtRes.ok) {
             throw new Error('Failed to load some admin data');
         }
-        
+
         const pendingData = await pendingRes.json();
         const roomBlocksData = await roomBlocksRes.json();
         const roomBlocksRegsData = await roomBlocksRegsRes.json();
         const panelsData = await panelsRes.json();
         const tshirtData = await tshirtRes.json();
-        
+
         lastAdminData = {
             ...pendingData,
             roomBlocks: roomBlocksData.roomBlocks,
@@ -466,7 +466,7 @@ async function loadAdminPanel() {
             tshirtSummary: tshirtData.summary,
             tshirtDetails: tshirtData.details
         };
-        
+
         renderAdminPanel(lastAdminData);
 
     } catch (error) {
@@ -558,7 +558,7 @@ function renderAdminPanel(data) {
     // === ROOM BLOCKS ADMIN SECTION ===
     const roomBlocks = data.roomBlocks || [];
     const roomBlockRegs = data.roomBlockRegistrations || [];
-    
+
     html += `
         <div class="admin-unofficial-section" style="margin-top: 50px; border-top: 2px solid var(--border-color); padding-top: 30px;">
             <div class="admin-unofficial-header">
@@ -570,7 +570,7 @@ function renderAdminPanel(data) {
                 <!-- Room Blocks list & registrations -->
                 <div style="width: 100%;">
     `;
-    
+
     if (roomBlocks.length === 0) {
         html += '<p>No room blocks created yet.</p>';
     } else {
@@ -578,7 +578,7 @@ function renderAdminPanel(data) {
             const blockRegs = roomBlockRegs.filter(r => r.roomBlockId === block.id);
             const activeRegs = blockRegs.filter(r => r.status === 'registered');
             const waitlistRegs = blockRegs.filter(r => r.status === 'waitlist');
-            
+
             html += `
                 <div class="admin-activity" style="margin-bottom: 25px; padding: 15px; border: 1px solid var(--border-color); border-radius: 8px;">
                     <div style="display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 10px;">
@@ -589,7 +589,7 @@ function renderAdminPanel(data) {
                     </div>
                     <p style="font-size: 0.9rem; color: var(--text-color); margin-bottom: 15px; font-style: italic;">${block.blurb || 'No description/blurb.'}</p>
             `;
-            
+
             if (block.hasSignups) {
                 html += `
                     <div style="margin-top: 10px;">
@@ -609,17 +609,17 @@ function renderAdminPanel(data) {
                     </div>
                 `;
             }
-            
+
             html += '</div>';
         }
     }
-    
+
     html += `
                 </div>
             </div>
         </div>
     `;
-    
+
     // === PANEL SUBMISSIONS ADMIN SECTION ===
     const panels = data.panels || [];
     html += `
@@ -629,7 +629,7 @@ function renderAdminPanel(data) {
                 <button class="export-csv-btn" onclick="exportPanelSubmissionsCSV()">Export Proposals CSV</button>
             </div>
     `;
-    
+
     if (panels.length === 0) {
         html += '<p style="text-align: left;">No panel proposals submitted yet.</p>';
     } else {
@@ -663,11 +663,11 @@ function renderAdminPanel(data) {
         `;
     }
     html += '</div>';
-    
+
     // === T-SHIRT SELECTIONS ADMIN SECTION ===
     const tshirtSummary = data.tshirtSummary || [];
     const tshirtDetails = data.tshirtDetails || [];
-    
+
     html += `
         <div class="admin-unofficial-section" style="margin-top: 50px; border-top: 2px solid var(--border-color); padding-top: 30px; margin-bottom: 30px;">
             <div class="admin-unofficial-header" style="margin-bottom: 20px;">
@@ -686,8 +686,8 @@ function renderAdminPanel(data) {
                             </tr>
                         </thead>
                         <tbody>
-                            ${tshirtSummary.length === 0 ? '<tr><td colspan="2">No selections recorded.</td></tr>' : 
-                              tshirtSummary.map(ts => `
+                            ${tshirtSummary.length === 0 ? '<tr><td colspan="2">No selections recorded.</td></tr>' :
+            tshirtSummary.map(ts => `
                                 <tr>
                                     <td><strong>${ts.tshirtSize}</strong></td>
                                     <td><strong>${ts.count}</strong></td>
@@ -758,10 +758,10 @@ async function clearSelections() {
     if (!confirm('Delete ALL group selections from the database? This cannot be undone.')) {
         return;
     }
-    
+
     try {
         showNotification('Clearing selections...', 'info');
-        
+
         const token = localStorage.getItem('wca_auth_token');
         const headers = {};
         if (token) headers['Authorization'] = `Bearer ${token}`;
@@ -771,13 +771,13 @@ async function clearSelections() {
             credentials: 'include',
             headers
         });
-        
+
         const data = await response.json();
-        
+
         if (!response.ok) {
             throw new Error(data.error || 'Failed to clear selections');
         }
-        
+
         showNotification(`Cleared ${data.deleted} group selection(s).`, 'success');
         await loadAdminPanel();
     } catch (error) {
@@ -839,18 +839,18 @@ function exportUnofficialScorecards(eventId) {
 async function loadRoomBlocks() {
     const content = document.getElementById('roomBlocksContent');
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading room blocks...</p></div>';
-    
+
     try {
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${API_BASE_URL}/api/room-blocks/public`, {
             credentials: 'include',
             headers
         });
         if (!response.ok) throw new Error('Failed to fetch room blocks');
-        
+
         const data = await response.json();
         currentUserRegistration = data.userRegistration;
         if (currentUserRegistration && currentUserRegistration.email) {
@@ -888,7 +888,7 @@ async function loadRoomBlocks() {
 function renderRoomBlocks(roomBlocks, userRegistration) {
     const content = document.getElementById('roomBlocksContent');
     let html = '';
-    
+
     if (userRegistration) {
         html += `
             <div class="warning-box" style="border-left-color: var(--secondary-color); background: #f0faf0; text-align: center;">
@@ -899,13 +899,13 @@ function renderRoomBlocks(roomBlocks, userRegistration) {
             </div>
         `;
     }
-    
+
     html += '<div class="room-blocks-grid">';
-    
+
     for (const block of roomBlocks) {
         const isRegisteredHere = userRegistration && userRegistration.roomBlockId === block.id;
         const cardClass = isRegisteredHere ? 'room-block-card registered' : 'room-block-card';
-        
+
         html += `
             <div class="${cardClass}">
                 ${isRegisteredHere ? `
@@ -914,7 +914,7 @@ function renderRoomBlocks(roomBlocks, userRegistration) {
                 <div class="room-block-name">${block.name}</div>
                 <div class="room-block-blurb">${block.blurb || 'No description available.'}</div>
         `;
-        
+
         if (block.hasSignups) {
             html += `
                 <div class="room-block-stats">
@@ -932,7 +932,7 @@ function renderRoomBlocks(roomBlocks, userRegistration) {
                     </div>
                 </div>
             `;
-            
+
             if (currentUser) {
                 if (isRegisteredHere) {
                     html += `
@@ -971,31 +971,31 @@ function renderRoomBlocks(roomBlocks, userRegistration) {
                 </div>
             `;
         }
-        
+
         html += '</div>';
     }
-    
+
     content.innerHTML = html;
 }
 
 function showSignupField(blockId, isFull) {
     const container = document.getElementById(`signup-container-${blockId}`);
     if (!container) return;
-    
+
     if (userSharedEmail) {
         submitSignupDirect(blockId);
         return;
     }
-    
+
     const buttonText = isFull ? "Join Waitlist" : "Confirm";
-    
+
     container.innerHTML = `
         <div class="form-group" style="margin-bottom: 10px; width: 100%;">
             <input type="email" id="email-input-${blockId}" placeholder="Enter your email" required style="width: 100%; padding: 8px; border: 1px solid var(--border-color); border-radius: 6px;">
         </div>
         <button class="btn-primary" style="width: 100%;" onclick="submitSignup(${blockId})">${buttonText}</button>
     `;
-    
+
     document.getElementById(`email-input-${blockId}`).focus();
 }
 
@@ -1006,9 +1006,9 @@ async function submitSignupDirect(blockId) {
 async function submitSignup(blockId) {
     const emailInput = document.getElementById(`email-input-${blockId}`);
     if (!emailInput) return;
-    
+
     const email = emailInput.value.trim();
-    
+
     // Email regex validation
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
     if (!emailRegex.test(email)) {
@@ -1016,7 +1016,7 @@ async function submitSignup(blockId) {
         emailInput.focus();
         return;
     }
-    
+
     userSharedEmail = email; // Cache it
     await executeRoomBlockRegister(blockId, email);
 }
@@ -1024,7 +1024,7 @@ async function submitSignup(blockId) {
 async function roomBlocksSwitch(roomBlockId, newBlockName, oldBlockName) {
     const switchConfirmed = confirm(`You are currently registered for '${oldBlockName}'. Switching will drop you from this block. Are you sure you want to proceed?`);
     if (!switchConfirmed) return;
-    
+
     const email = userSharedEmail;
     if (!email) {
         const emailInput = prompt("Please confirm your email address:", "");
@@ -1040,7 +1040,7 @@ async function executeRoomBlockRegister(roomBlockId, email) {
     const token = localStorage.getItem('wca_auth_token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/room-blocks/register`, {
             method: 'POST',
@@ -1063,11 +1063,11 @@ async function executeRoomBlockRegister(roomBlockId, email) {
 
 async function roomBlocksLeave(roomBlockId) {
     if (!confirm("Are you sure you want to leave this room block? This will drop your registration and any waitlist positions.")) return;
-    
+
     const token = localStorage.getItem('wca_auth_token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/room-blocks/unregister`, {
             method: 'POST',
@@ -1091,7 +1091,7 @@ async function roomBlocksLeave(roomBlockId) {
 // ==================== PANEL SIGNUPS TAB ====================
 async function loadPanels() {
     const content = document.getElementById('panelsContent');
-    
+
     if (!currentUser) {
         content.innerHTML = `
             <div class="message-box">
@@ -1102,20 +1102,20 @@ async function loadPanels() {
         `;
         return;
     }
-    
+
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading your panels...</p></div>';
-    
+
     try {
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${API_BASE_URL}/api/panels/my-submissions`, {
             credentials: 'include',
             headers
         });
         if (!response.ok) throw new Error('Failed to load panels');
-        
+
         const data = await response.json();
         if (data.submissions && data.submissions.length > 0) {
             userSharedEmail = data.submissions[0].email || userSharedEmail;
@@ -1138,20 +1138,21 @@ async function loadPanels() {
 
 function renderPanels(submissions) {
     const content = document.getElementById('panelsContent');
-    
+
     // Determine a default email if they have already provided one
     if (submissions && submissions.length > 0) {
         userSharedEmail = submissions[0].email || userSharedEmail;
     } else if (currentUserRegistration && currentUserRegistration.email) {
         userSharedEmail = currentUserRegistration.email;
     }
-    
+
     let html = '';
 
     if (PANELS_CLOSED) {
         html += `
             <div class="message-box warning" style="background-color: #fff3cd; color: #856404; border: 1px solid #ffeeba; padding: 15px; border-radius: 8px; margin-bottom: 25px; line-height: 1.5;">
-                <p style="margin: 0; font-size: 1.05rem; font-weight: 600;">
+            <p style="margin: 0; font-size: 1.2rem; font-weight: 700;">To view your time slots, please check <a href="https://www.competitiongroups.com/competitions/BayAreaSpeedcubin692026">competitiongroups.com</a></p>    
+            <p style="margin: 0; font-size: 1.05rem; font-weight: 600;">
                     Competition is coming up soon! Panel submissions and edits are now closed. If you have a conflict, please contact Calvin Nielson at <a href="mailto:cnielson@worldcubeassociation.org">cnielson@worldcubeassociation.org</a>
                 </p>
             </div>
@@ -1167,7 +1168,7 @@ function renderPanels(submissions) {
                 </div>
             `;
         }
-        
+
         html += `
             <form onsubmit="panelsSubmit(event)" class="custom-form">
                 <h3>Submit a Panel</h3>
@@ -1187,10 +1188,10 @@ function renderPanels(submissions) {
             </form>
         `;
     }
-    
+
     html += '<div class="submissions-list">';
     html += '<h3>Your Submissions</h3>';
-    
+
     if (!submissions || submissions.length === 0) {
         html += '<p style="color: var(--text-light); margin-top: 15px;">You have not submitted any panels yet.</p>';
     } else {
@@ -1209,7 +1210,7 @@ function renderPanels(submissions) {
             `;
         }
     }
-    
+
     html += '</div>';
     content.innerHTML = html;
 }
@@ -1219,10 +1220,10 @@ async function panelsSubmit(e) {
     const token = localStorage.getItem('wca_auth_token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     const panelName = document.getElementById('panel-name').value;
     const description = document.getElementById('panel-desc').value;
-    
+
     let email = userSharedEmail;
     const emailInput = document.getElementById('panel-email');
     if (emailInput) {
@@ -1236,7 +1237,7 @@ async function panelsSubmit(e) {
         }
         userSharedEmail = email; // Cache it
     }
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/panels/submit`, {
             method: 'POST',
@@ -1244,7 +1245,7 @@ async function panelsSubmit(e) {
             headers,
             body: JSON.stringify({ panelName, description, email })
         });
-        
+
         if (response.ok) {
             showNotification('Panel proposal submitted!', 'success');
             await loadPanels();
@@ -1259,18 +1260,18 @@ async function panelsSubmit(e) {
 
 async function panelsDelete(id) {
     if (!confirm('Are you sure you want to delete this panel proposal?')) return;
-    
+
     const token = localStorage.getItem('wca_auth_token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/panels/my-submissions/${id}`, {
             method: 'DELETE',
             credentials: 'include',
             headers
         });
-        
+
         if (response.ok) {
             showNotification('Panel proposal deleted', 'success');
             await loadPanels();
@@ -1287,7 +1288,7 @@ async function panelsDelete(id) {
 // ==================== T-SHIRT SIZE SELECTION TAB ====================
 async function loadTShirt() {
     const content = document.getElementById('tshirtContent');
-    
+
     if (!currentUser) {
         content.innerHTML = `
             <div class="message-box">
@@ -1298,20 +1299,20 @@ async function loadTShirt() {
         `;
         return;
     }
-    
+
     content.innerHTML = '<div class="loading"><div class="spinner"></div><p>Loading T-shirt settings...</p></div>';
-    
+
     try {
         const token = localStorage.getItem('wca_auth_token');
         const headers = { 'Content-Type': 'application/json' };
         if (token) headers['Authorization'] = `Bearer ${token}`;
-        
+
         const response = await fetch(`${API_BASE_URL}/api/tshirt/my-selection`, {
             credentials: 'include',
             headers
         });
         if (!response.ok) throw new Error('Failed to load size choice');
-        
+
         const data = await response.json();
         renderTShirt(data.selection);
     } catch (error) {
@@ -1328,7 +1329,7 @@ async function loadTShirt() {
 function renderTShirt(selection) {
     const content = document.getElementById('tshirtContent');
     const selectedSize = selection ? selection.tshirtSize : '';
-    
+
     let html = `
         <div class="warning-box">
             <p>
@@ -1365,7 +1366,7 @@ function renderTShirt(selection) {
             <button type="submit" class="btn-primary" style="width: 100%;">${selectedSize ? 'Update Size Selection' : 'Confirm Size Selection'}</button>
         </form>
     `;
-    
+
     content.innerHTML = html;
 }
 
@@ -1374,9 +1375,9 @@ async function tshirtSubmit(e) {
     const token = localStorage.getItem('wca_auth_token');
     const headers = { 'Content-Type': 'application/json' };
     if (token) headers['Authorization'] = `Bearer ${token}`;
-    
+
     const size = document.getElementById('tshirt-size').value;
-    
+
     try {
         const response = await fetch(`${API_BASE_URL}/api/tshirt/select`, {
             method: 'POST',
@@ -1384,7 +1385,7 @@ async function tshirtSubmit(e) {
             headers,
             body: JSON.stringify({ size })
         });
-        
+
         if (response.ok) {
             showNotification('T-shirt size selection saved!', 'success');
             await loadTShirt();
@@ -1449,30 +1450,30 @@ async function logout() {
         const headers = {
             'Content-Type': 'application/json'
         };
-        
+
         if (token) {
             headers['Authorization'] = `Bearer ${token}`;
         }
-        
+
         await fetch(`${API_BASE_URL}/auth/logout`, {
             method: 'POST',
             credentials: 'include',
             headers
         });
-        
+
         // Clear token from localStorage
         localStorage.removeItem('wca_auth_token');
-        
+
         currentUser = null;
         isDelegate = false;
         document.getElementById('adminTabBtn').style.display = 'none';
         setupUserSection();
-        
+
         // Switch to schedule tab
         document.querySelector('[data-tab="schedule"]').click();
-        
+
         showNotification('Logged out successfully', 'success');
-        
+
     } catch (error) {
         console.error('Logout error:', error);
         showNotification('Failed to logout', 'error');
@@ -1497,11 +1498,11 @@ function showNotification(message, type = 'info', duration = 3000, isHTML = fals
         notification.textContent = message;
     }
     document.body.appendChild(notification);
-    
+
     setTimeout(() => {
         notification.classList.add('show');
     }, 10);
-    
+
     setTimeout(() => {
         notification.classList.remove('show');
         setTimeout(() => notification.remove(), 300);
